@@ -4,9 +4,13 @@
 
 
 **Instituto Tecnológico y de Estudios Superiores de Monterrey**
+
 **Campus Monterrey**
+
 **TC2008B - Grupo 302**
+
 **Modelación de Sistemas Multiagentes con Gráficas Computacionales**
+
 
 **Profesores:**
 - Raul V. Ramirez Velarde
