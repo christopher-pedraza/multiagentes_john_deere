@@ -1,6 +1,6 @@
 # Multiagentes_john_deere
 
-![Tec de Monterrey](TecLogo.png)
+![Tec de Monterrey](Resources/TecLogo.png)
 
 
 **Instituto Tecnológico y de Estudios Superiores de Monterrey**
