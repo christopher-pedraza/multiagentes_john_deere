@@ -339,6 +339,7 @@ class FieldModel(ap.Model):
         for i in range(self.p.num_episodes):
             self.reset()
             done = False
+            reward_sum = 0
             print(f"Episodio {i}")
             while not done:
                 for cosechadora in self.cosechadoras:
@@ -349,21 +350,22 @@ class FieldModel(ap.Model):
                         q_values, state, self.p.exploration_rate
                     )
                     reward, done = self.cosechadoras.move(direcciones[action])[0]
-                    print(f"x: {cosechadora.pos[0]}, y: {cosechadora.pos[1]}")
-                    next_state = int(
-                        cosechadora.pos[1]
-                    ) * self.p.dimensiones_campo + int(cosechadora.pos[0])
-                    reward_sum += reward
+                    if reward != 0:
+                        print(f"x: {cosechadora.pos[0]}, y: {cosechadora.pos[1]}")
+                        next_state = int(
+                            cosechadora.pos[1]
+                        ) * self.p.dimensiones_campo + int(cosechadora.pos[0])
+                        reward_sum += reward
 
-                    # La ecuación de Bellman se define como:
-                    # Q(s,a) = r + gamma * max(Q(s',a')) - Q(s,a)
-                    td_target = reward + self.p.gamma * np.max(q_values[next_state])
-                    td_error = td_target - q_values[state][action]
-                    # Actualiza el valor Q para el estado y acción actuales con el valor
-                    # de la ecuación de Bellman.
-                    q_values[state][action] += self.p.learning_rate * td_error
-                    # Actualiza el estado actual al nuevo estado.
-                    state = next_state
+                        # La ecuación de Bellman se define como:
+                        # Q(s,a) = r + gamma * max(Q(s',a')) - Q(s,a)
+                        td_target = reward + self.p.gamma * np.max(q_values[next_state])
+                        td_error = td_target - q_values[state][action]
+                        # Actualiza el valor Q para el estado y acción actuales con el valor
+                        # de la ecuación de Bellman.
+                        q_values[state][action] += self.p.learning_rate * td_error
+                        # Actualiza el estado actual al nuevo estado.
+                        state = next_state
 
                 self.cosechadoras.cosechar()
                 self.tractors.move()
@@ -461,28 +463,28 @@ class FieldModel(ap.Model):
 
 # Parámetros del modelo en 2D
 parameters2D = {
-    "size": 5,
+    "size": 10,
+    "dimensiones_campo": 10,
     "seed": 123,
     "steps": 1000,
     "ndim": 2,
-    "dimensiones_campo": 5,
     "densidad": 10,
     "capacidad_max": 1000,
     "cosechadora_population": 1,
     "tractor_population": 2,
-    "inner_radius": 5,  # 3
-    "outer_radius": 10,  # 10
+    "inner_radius": 1,  # 3
+    "outer_radius": 3,  # 10
     "harvest_radius": 1,  # 1
-    "border_distance": 3,  # 10
-    "tractor_radius": 3,
+    "border_distance": 1,  # 10
+    "tractor_radius": 1,
     "cohesion_strength": 0.005,
     "separation_strength": 0.1,
     "alignment_strength": 0.3,
     "border_strength": 0.5,
     # QLEARNING
-    "exploration_rate": 0.3,
+    "exploration_rate": 0.1,
     "num_episodes": 200,
-    "learning_rate": 0.01,  # 0.5
+    "learning_rate": 0.1,  # 0.5
     "gamma": 0.9,
 }
 
