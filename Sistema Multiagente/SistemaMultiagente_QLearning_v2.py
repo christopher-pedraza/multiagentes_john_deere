@@ -63,43 +63,45 @@ class Cosechadora(ap.Agent):
             # Moverse hacia la posición objetivo
             if distancia >= self.velocity:
                 if (
-                    self.target_position[0] > self.p.dimensiones_campo
+                    self.target_position[0] > self.p.dimensiones_campo - 1
                     or self.target_position[0] < 0
-                    or self.target_position[1] > self.p.dimensiones_campo
+                    or self.target_position[1] > self.p.dimensiones_campo - 1
                     or self.target_position[1] < 0
                 ):
                     # print("\t\tOUT OF BOUNDS REWARD: -100")
                     reward = -100
                     done = True
+                    return reward, done
 
                 self.space.move_to(self, self.target_position)
                 # self.space.move_by(self, direccion * self.velocity)
 
             else:
                 if (
-                    self.target_position[0] > self.p.dimensiones_campo
+                    self.target_position[0] > self.p.dimensiones_campo - 1
                     or self.target_position[0] < 0
-                    or self.target_position[1] > self.p.dimensiones_campo
+                    or self.target_position[1] > self.p.dimensiones_campo - 1
                     or self.target_position[1] < 0
                 ):
                     # print("\t\tOUT OF BOUNDS REWARD: -100")
                     reward = -100
                     done = True
+                    return reward, done
 
                 for nb in self.neighbors(self, distance=self.p.harvest_radius):
                     if nb.identificador == "celda":
                         if nb.pertenencia == self.id:
                             # print("\t\tCELDA DE OTRA COSECHADORA: -30")
-                            reward = -30
+                            reward = -50
                             done = False
                             break
                         elif nb.isCosechado:
                             # print("\t\tCELDA COSECHADA: -10")
-                            reward = -10
+                            reward = -30
                             done = False
                             break
                         # Si celda no ha sido cosechada
-                        elif nb.isCosechado:
+                        elif not nb.isCosechado:
                             # print("\t\tNORMAL: -1")
                             reward = -1
                             done = False
@@ -116,12 +118,16 @@ class Cosechadora(ap.Agent):
             if self.estado == "cosechando":
                 x, y = self.pos[0], self.pos[1]
                 if direction == "up":
+                    print("Up")
                     self.target_position = np.array([x, y + 1])
                 elif direction == "down":
+                    print("Down")
                     self.target_position = np.array([x, y - 1])
                 elif direction == "left":
+                    print("Left")
                     self.target_position = np.array([x - 1, y])
                 elif direction == "right":
+                    print("Right")
                     self.target_position = np.array([x + 1, y])
                 self.moving = True
 
@@ -177,7 +183,7 @@ class Tractor(ap.Agent):
     def setup(self):
         self.velocity = 1.5
         self.identificador = "tractor"
-        self.target_position = np.array([10, 10])
+        self.target_position = np.array([2, 2])
         self.moving = False
 
     def move(self):
@@ -252,7 +258,7 @@ class FieldModel(ap.Model):
             self, self.p.cosechadora_population, Cosechadora
         )
         self.tractors = ap.AgentList(self, self.p.tractor_population, Tractor)
-        self.space.add_agents(self.cosechadoras, positions=[np.array([10, 10])])
+        self.space.add_agents(self.cosechadoras, positions=[np.array([0, 0])])
         self.cosechadoras.setup_pos(self.space)
 
         # Crear celdas_campo sin agregarlas al espacio aún
@@ -301,9 +307,11 @@ class FieldModel(ap.Model):
         # Se verifica si el valor epsilon es mayor a un número aleatorio entre 0 y 1
         # Si es verdadero, se elige una acción aleatoria
         if np.random.random() < epsilon:
+            # print("USO RANDOM")
             return np.random.choice(4)
         # Sino, se elige la mejor acción
         else:
+            # print("USO QVALUES")
             return np.argmax(q_values[state])
 
     def reset(self):
@@ -341,6 +349,7 @@ class FieldModel(ap.Model):
                         q_values, state, self.p.exploration_rate
                     )
                     reward, done = self.cosechadoras.move(direcciones[action])[0]
+                    print(f"x: {cosechadora.pos[0]}, y: {cosechadora.pos[1]}")
                     next_state = int(
                         cosechadora.pos[1]
                     ) * self.p.dimensiones_campo + int(cosechadora.pos[0])
@@ -379,9 +388,6 @@ class FieldModel(ap.Model):
                         cosechadora.pos[0]
                     )
                     action = self.egreedy_policy(q_values, state, 0.0)
-                    print(
-                        f"Cosechadora: {cosechadora}, Acción: {direcciones[action]}, Posición: {cosechadora.pos}"
-                    )
                     _, done = self.cosechadoras.move(direcciones[action])[0]
                     state = (
                         cosechadora.pos[1] * self.p.dimensiones_campo
@@ -406,7 +412,7 @@ class FieldModel(ap.Model):
             self, self.p.cosechadora_population, Cosechadora
         )
         self.tractors = ap.AgentList(self, self.p.tractor_population, Tractor)
-        self.space.add_agents(self.cosechadoras, positions=[np.array([10, 10])])
+        self.space.add_agents(self.cosechadoras, positions=[np.array([0, 0])])
         self.cosechadoras.setup_pos(self.space)
 
         # Crear celdas_campo sin agregarlas al espacio aún
@@ -455,11 +461,11 @@ class FieldModel(ap.Model):
 
 # Parámetros del modelo en 2D
 parameters2D = {
-    "size": 50,
+    "size": 5,
     "seed": 123,
     "steps": 1000,
     "ndim": 2,
-    "dimensiones_campo": 50,
+    "dimensiones_campo": 5,
     "densidad": 10,
     "capacidad_max": 1000,
     "cosechadora_population": 1,
@@ -474,9 +480,9 @@ parameters2D = {
     "alignment_strength": 0.3,
     "border_strength": 0.5,
     # QLEARNING
-    "exploration_rate": 0.1,
-    "num_episodes": 10,
-    "learning_rate": 0.5,
+    "exploration_rate": 0.3,
+    "num_episodes": 200,
+    "learning_rate": 0.01,  # 0.5
     "gamma": 0.9,
 }
 
