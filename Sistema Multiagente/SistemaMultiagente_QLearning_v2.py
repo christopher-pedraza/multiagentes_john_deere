@@ -71,6 +71,7 @@ class Cosechadora(ap.Agent):
                     # print("\t\tOUT OF BOUNDS REWARD: -100")
                     reward = -100
                     done = True
+                    self.moving = False
                     return reward, done
 
                 self.space.move_to(self, self.target_position)
@@ -86,8 +87,13 @@ class Cosechadora(ap.Agent):
                     # print("\t\tOUT OF BOUNDS REWARD: -100")
                     reward = -100
                     done = True
+                    self.moving = False
                     return reward, done
 
+                print(
+                    "*************VECINOS",
+                    len(self.neighbors(self, distance=self.p.harvest_radius)),
+                )
                 for nb in self.neighbors(self, distance=self.p.harvest_radius):
                     if nb.identificador == "celda":
                         if nb.pertenencia == self.id:
@@ -169,6 +175,7 @@ class Cosechadora(ap.Agent):
             self.space.move_by(self, self.velocity)
 
     def cosechar(self):
+        print(self.capacidad)
         for nb in self.neighbors(self, distance=self.p.harvest_radius):
             if nb.identificador == "celda" and not nb.isCosechado:
                 self.capacidad += nb.cosechar()
@@ -391,10 +398,6 @@ class FieldModel(ap.Model):
                     )
                     action = self.egreedy_policy(q_values, state, 0.0)
                     _, done = self.cosechadoras.move(direcciones[action])[0]
-                    state = (
-                        cosechadora.pos[1] * self.p.dimensiones_campo
-                        + cosechadora.pos[0]
-                    )
 
                 self.cosechadoras.cosechar()
                 self.tractors.move()
@@ -463,8 +466,8 @@ class FieldModel(ap.Model):
 
 # Parámetros del modelo en 2D
 parameters2D = {
-    "size": 10,
-    "dimensiones_campo": 10,
+    "size": 5,
+    "dimensiones_campo": 5,
     "seed": 123,
     "steps": 1000,
     "ndim": 2,
@@ -474,7 +477,7 @@ parameters2D = {
     "tractor_population": 2,
     "inner_radius": 1,  # 3
     "outer_radius": 3,  # 10
-    "harvest_radius": 1,  # 1
+    "harvest_radius": 0.2,  # 1
     "border_distance": 1,  # 10
     "tractor_radius": 1,
     "cohesion_strength": 0.005,
@@ -483,7 +486,7 @@ parameters2D = {
     "border_strength": 0.5,
     # QLEARNING
     "exploration_rate": 0.1,
-    "num_episodes": 200,
+    "num_episodes": 500,
     "learning_rate": 0.1,  # 0.5
     "gamma": 0.9,
 }
