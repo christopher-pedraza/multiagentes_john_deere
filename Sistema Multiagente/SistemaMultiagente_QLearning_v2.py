@@ -85,7 +85,7 @@ class Cosechadora(ap.Agent):
                     or self.target_position[1] < 0
                 ):
                     # print("\t\tOUT OF BOUNDS REWARD: -100")
-                    reward = -100
+                    reward = -1000
                     done = True
                     self.moving = False
                     return reward, done
@@ -110,7 +110,7 @@ class Cosechadora(ap.Agent):
                             break
                         elif nb.identificador == "cosechadora":
                             # print("\t\COLISION: -100")
-                            reward = -100
+                            reward = -1000
                             done = True
                             break
 
@@ -132,6 +132,18 @@ class Cosechadora(ap.Agent):
                     print("Right")
                     self.target_position = np.array([x + 1, y])
                 self.moving = True
+
+                if (
+                    self.target_position[0] > self.p.dimensiones_campo - 1
+                    or self.target_position[0] < 0
+                    or self.target_position[1] > self.p.dimensiones_campo - 1
+                    or self.target_position[1] < 0
+                ):
+                    # print("\t\tOUT OF BOUNDS REWARD: -100")
+                    reward = -1000
+                    done = True
+                    self.moving = False
+                    return reward, done
 
         return reward, done
 
@@ -171,7 +183,6 @@ class Cosechadora(ap.Agent):
             self.space.move_by(self, self.velocity)
 
     def cosechar(self):
-        print(self.capacidad)
         for nb in self.neighbors(self, distance=self.p.harvest_radius):
             if nb.identificador == "celda" and not nb.isCosechado:
                 self.capacidad += nb.cosechar()
@@ -359,34 +370,33 @@ class FieldModel(ap.Model):
                     while reward == 0:
                         reward, done = self.cosechadoras.move(direcciones[action])[0]
 
-                    if not done:
-                        next_state = (
-                            cosechadora.pos[1] * self.p.dimensiones_campo
-                            + cosechadora.pos[0]
-                        )
+                    next_state = (
+                        cosechadora.pos[1] * self.p.dimensiones_campo
+                        + cosechadora.pos[0]
+                    )
 
-                        print("State: ", state, "New State: ", next_state)
+                    reward_sum += reward
 
-                        reward_sum += reward
-
-                        # La ecuación de Bellman se define como:
-                        # Q(s,a) = r + gamma * max(Q(s',a')) - Q(s,a)
-                        td_target = reward + self.p.gamma * np.max(q_values[next_state])
-                        td_error = td_target - q_values[state][action]
-                        # Actualiza el valor Q para el estado y acción actuales con el valor
-                        # de la ecuación de Bellman.
-                        q_values[state][action] += self.p.learning_rate * td_error
-                        # Actualiza el estado actual al nuevo estado.
-                        state = next_state
+                    # La ecuación de Bellman se define como:
+                    # Q(s,a) = r + gamma * max(Q(s',a')) - Q(s,a)
+                    if done:
+                        td_target = reward
                     else:
-                        break
+                        td_target = reward + self.p.gamma * np.max(q_values[next_state])
+                    td_error = td_target - q_values[state][action]
+                    # Actualiza el valor Q para el estado y acción actuales con el valor
+                    # de la ecuación de Bellman.
+                    q_values[state][action] += self.p.learning_rate * td_error
 
                 self.cosechadoras.cosechar()
                 self.tractors.move()
 
+            if self.p.exploration_rate > 0.1:
+                self.p.exploration_rate -= 0.05
+
             ep_rewards.append(reward_sum)
 
-        print(f"\tEPISODE REWARDS: {ep_rewards}, Q_VALUES: {q_values}")
+        print(f"EPISODE REWARDS: {ep_rewards}, \nQ_VALUES: \n{q_values}")
 
         return ep_rewards, q_values
 
@@ -400,8 +410,9 @@ class FieldModel(ap.Model):
 
             while not done:
                 for cosechadora in self.cosechadoras:
-                    state = int(cosechadora.pos[1]) * self.p.dimensiones_campo + int(
-                        cosechadora.pos[0]
+                    state = (
+                        cosechadora.pos[1] * self.p.dimensiones_campo
+                        + cosechadora.pos[0]
                     )
                     action = self.egreedy_policy(q_values, state, 0.0)
                     _, done = self.cosechadoras.move(direcciones[action])[0]
@@ -419,35 +430,37 @@ class FieldModel(ap.Model):
 
     # Ejecuta la simulación y WebSocket
     async def run_simulation_with_websocket(self, q_values):
-        self.space = ap.Space(self, shape=[self.p.size] * self.p.ndim)
-        self.cosechadoras = ap.AgentList(
-            self, self.p.cosechadora_population, Cosechadora
-        )
-        self.tractors = ap.AgentList(self, self.p.tractor_population, Tractor)
-        self.space.add_agents(self.cosechadoras, positions=[np.array([0, 0])])
-        self.cosechadoras.setup_pos(self.space)
+        # self.space = ap.Space(self, shape=[self.p.size] * self.p.ndim)
+        # self.cosechadoras = ap.AgentList(
+        #     self, self.p.cosechadora_population, Cosechadora
+        # )
+        # self.tractors = ap.AgentList(self, self.p.tractor_population, Tractor)
+        # self.space.add_agents(self.cosechadoras, positions=[np.array([0, 0])])
+        # self.cosechadoras.setup_pos(self.space)
 
-        # Crear celdas_campo sin agregarlas al espacio aún
-        self.celdas_campo = ap.AgentList(
-            self, self.p.dimensiones_campo**2, CeldaCampo
-        )
+        # # Crear celdas_campo sin agregarlas al espacio aún
+        # self.celdas_campo = ap.AgentList(
+        #     self, self.p.dimensiones_campo**2, CeldaCampo
+        # )
 
-        self.celdas_campo.setup_pertenencia(self.cosechadoras[0].id)
+        # self.celdas_campo.setup_pertenencia(self.cosechadoras[0].id)
 
-        for i in range(self.p.tractor_population):
-            self.space.positions[self.tractors[i]] = np.ndarray(
-                (2,), buffer=np.array([0, 0]), dtype=int
-            )
-        self.tractors.setup_pos(self.space)
+        # for i in range(self.p.tractor_population):
+        #     self.space.positions[self.tractors[i]] = np.ndarray(
+        #         (2,), buffer=np.array([0, 0]), dtype=int
+        #     )
+        # self.tractors.setup_pos(self.space)
 
-        # Asignar manualmente posiciones a cada celda_campo
-        grid_size = self.p.dimensiones_campo
-        for x in range(grid_size):
-            for y in range(grid_size):
-                index = x * grid_size + y
-                celda = self.celdas_campo[index]
-                # celda.setup_pos(self.space)
-                self.space.positions[celda] = (x, y)
+        # # Asignar manualmente posiciones a cada celda_campo
+        # grid_size = self.p.dimensiones_campo
+        # for x in range(grid_size):
+        #     for y in range(grid_size):
+        #         index = x * grid_size + y
+        #         celda = self.celdas_campo[index]
+        #         # celda.setup_pos(self.space)
+        #         self.space.positions[celda] = (x, y)
+
+        self.reset()
 
         loop = asyncio.get_running_loop()
 
@@ -492,9 +505,9 @@ parameters2D = {
     "alignment_strength": 0.3,
     "border_strength": 0.5,
     # QLEARNING
-    "exploration_rate": 0.1,
-    "num_episodes": 500,
-    "learning_rate": 0.5,  # 0.5
+    "exploration_rate": 0.9,
+    "num_episodes": 2000,
+    "learning_rate": 0.1,  # 0.5
     "gamma": 0.9,
 }
 
