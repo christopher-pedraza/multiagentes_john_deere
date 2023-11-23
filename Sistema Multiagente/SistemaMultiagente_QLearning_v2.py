@@ -120,16 +120,16 @@ class Cosechadora(ap.Agent):
             if self.estado == "cosechando":
                 x, y = self.pos[0], self.pos[1]
                 if direction == "up":
-                    print("Up")
+                    # print("Up")
                     self.target_position = np.array([x, y + 1])
                 elif direction == "down":
-                    print("Down")
+                    # print("Down")
                     self.target_position = np.array([x, y - 1])
                 elif direction == "left":
-                    print("Left")
+                    # print("Left")
                     self.target_position = np.array([x - 1, y])
                 elif direction == "right":
-                    print("Right")
+                    # print("Right")
                     self.target_position = np.array([x + 1, y])
                 self.moving = True
 
@@ -363,7 +363,7 @@ class FieldModel(ap.Model):
                     )
 
                     action = self.egreedy_policy(
-                        q_values, state, self.p.exploration_rate
+                        q_values, state, self.p.exploration_rate_upper
                     )
 
                     reward = 0
@@ -375,6 +375,8 @@ class FieldModel(ap.Model):
                         + cosechadora.pos[0]
                     )
 
+                    if action in [0, 1]:
+                        reward += 5
                     reward_sum += reward
 
                     # La ecuación de Bellman se define como:
@@ -415,7 +417,11 @@ class FieldModel(ap.Model):
                         + cosechadora.pos[0]
                     )
                     action = self.egreedy_policy(q_values, state, 0.0)
-                    _, done = self.cosechadoras.move(direcciones[action])[0]
+
+                    reward = 0
+                    while reward == 0:
+                        reward, done = self.cosechadoras.move(direcciones[action])[0]
+                    print(direcciones[action])
 
                 self.cosechadoras.cosechar()
                 self.tractors.move()
@@ -508,7 +514,7 @@ parameters2D = {
     "exploration_rate_upper": 0.9,
     "exploration_rate_lower": 0.1,
     "exploration_rate_decrease": 0.05,
-    "num_episodes": 10000,
+    "num_episodes": 1000,
     "learning_rate": 0.1,  # 0.5
     "gamma": 0.9,
 }
