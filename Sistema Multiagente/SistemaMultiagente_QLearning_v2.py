@@ -391,8 +391,8 @@ class FieldModel(ap.Model):
                 self.cosechadoras.cosechar()
                 self.tractors.move()
 
-            if self.p.exploration_rate > 0.1:
-                self.p.exploration_rate -= 0.05
+            if self.p.exploration_rate_upper > self.p.exploration_rate_lower:
+                self.p.exploration_rate_upper -= self.p.exploration_rate_decrease
 
             ep_rewards.append(reward_sum)
 
@@ -505,8 +505,10 @@ parameters2D = {
     "alignment_strength": 0.3,
     "border_strength": 0.5,
     # QLEARNING
-    "exploration_rate": 0.9,
-    "num_episodes": 2000,
+    "exploration_rate_upper": 0.9,
+    "exploration_rate_lower": 0.1,
+    "exploration_rate_decrease": 0.05,
+    "num_episodes": 10000,
     "learning_rate": 0.1,  # 0.5
     "gamma": 0.9,
 }
