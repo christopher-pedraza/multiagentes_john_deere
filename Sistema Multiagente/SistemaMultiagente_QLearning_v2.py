@@ -40,7 +40,7 @@ class CeldaCampo(ap.Agent):
 # Clase que representa una cosechadora en el campo
 class Cosechadora(ap.Agent):
     def setup(self):
-        self.velocity = 0.5
+        self.velocity = 1.0
         self.identificador = "cosechadora"
         self.capacidad_max = self.p.capacidad_max
         self.capacidad = 0
@@ -62,17 +62,17 @@ class Cosechadora(ap.Agent):
 
             # Moverse hacia la posición objetivo
             if distancia >= self.velocity:
-                if (
-                    self.target_position[0] > self.p.dimensiones_campo - 1
-                    or self.target_position[0] < 0
-                    or self.target_position[1] > self.p.dimensiones_campo - 1
-                    or self.target_position[1] < 0
-                ):
-                    # print("\t\tOUT OF BOUNDS REWARD: -100")
-                    reward = -100
-                    done = True
-                    self.moving = False
-                    return reward, done
+                # if (
+                #     self.target_position[0] > self.p.dimensiones_campo - 1
+                #     or self.target_position[0] < 0
+                #     or self.target_position[1] > self.p.dimensiones_campo - 1
+                #     or self.target_position[1] < 0
+                # ):
+                #     # print("\t\tOUT OF BOUNDS REWARD: -100")
+                #     reward = -100
+                #     done = True
+                #     self.moving = False
+                #     return reward, done
 
                 self.space.move_to(self, self.target_position)
                 # self.space.move_by(self, direccion * self.velocity)
@@ -90,13 +90,9 @@ class Cosechadora(ap.Agent):
                     self.moving = False
                     return reward, done
 
-                print(
-                    "*************VECINOS",
-                    len(self.neighbors(self, distance=self.p.harvest_radius)),
-                )
                 for nb in self.neighbors(self, distance=self.p.harvest_radius):
                     if nb.identificador == "celda":
-                        if nb.pertenencia == self.id:
+                        if nb.pertenencia != self.id:
                             # print("\t\tCELDA DE OTRA COSECHADORA: -30")
                             reward = -50
                             done = False
@@ -350,18 +346,27 @@ class FieldModel(ap.Model):
             print(f"Episodio {i}")
             while not done:
                 for cosechadora in self.cosechadoras:
-                    state = int(cosechadora.pos[1]) * self.p.dimensiones_campo + int(
-                        cosechadora.pos[0]
+                    state = (
+                        cosechadora.pos[1] * self.p.dimensiones_campo
+                        + cosechadora.pos[0]
                     )
+
                     action = self.egreedy_policy(
                         q_values, state, self.p.exploration_rate
                     )
-                    reward, done = self.cosechadoras.move(direcciones[action])[0]
-                    if reward != 0:
-                        print(f"x: {cosechadora.pos[0]}, y: {cosechadora.pos[1]}")
-                        next_state = int(
-                            cosechadora.pos[1]
-                        ) * self.p.dimensiones_campo + int(cosechadora.pos[0])
+
+                    reward = 0
+                    while reward == 0:
+                        reward, done = self.cosechadoras.move(direcciones[action])[0]
+
+                    if not done:
+                        next_state = (
+                            cosechadora.pos[1] * self.p.dimensiones_campo
+                            + cosechadora.pos[0]
+                        )
+
+                        print("State: ", state, "New State: ", next_state)
+
                         reward_sum += reward
 
                         # La ecuación de Bellman se define como:
@@ -373,6 +378,8 @@ class FieldModel(ap.Model):
                         q_values[state][action] += self.p.learning_rate * td_error
                         # Actualiza el estado actual al nuevo estado.
                         state = next_state
+                    else:
+                        break
 
                 self.cosechadoras.cosechar()
                 self.tractors.move()
@@ -487,7 +494,7 @@ parameters2D = {
     # QLEARNING
     "exploration_rate": 0.1,
     "num_episodes": 500,
-    "learning_rate": 0.1,  # 0.5
+    "learning_rate": 0.5,  # 0.5
     "gamma": 0.9,
 }
 
