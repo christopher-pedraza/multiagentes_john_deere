@@ -22,7 +22,7 @@ def normalize(v):
 # Clase que representa una celda en el campo
 class CeldaCampo(ap.Agent):
     def setup(self):
-        self.isCosechado = True
+        self.isCosechado = False
         self.densidad = self.p.densidad
         self.identificador = "celda"
 
@@ -180,7 +180,7 @@ class Cosechadora(ap.Agent):
 # Clase que representa un tractor en el campo
 class Tractor(ap.Agent):
     def setup(self):
-        self.velocity = 1.5
+        self.velocity = 1
         self.identificador = "tractor"
         self.target_position = np.array([2, 2])
         self.moving = False
@@ -367,7 +367,7 @@ class FieldModel(ap.Model):
                     if (
                         cosechadora.pos[1] == self.p.dimensiones_campo - 1
                         or cosechadora.pos[1] == 0
-                    ) and action in [3]:
+                    ) and action in [2, 3]:
                         reward += self.p.rewards_values["sides"]
                     elif cosechadora.pos[0] % 2 == 0 and action == 0:
                         reward += self.p.rewards_values["up"]
@@ -414,8 +414,6 @@ class FieldModel(ap.Model):
                         + cosechadora.pos[0]
                     )
                     action = self.egreedy_policy(q_values, state, 0.0)
-
-                    print(q_values[state])
 
                     reward = 0
                     while reward == 0:
@@ -465,7 +463,7 @@ parameters2D = {
     "steps": 1000,
     "ndim": 2,
     "densidad": 10,
-    "capacidad_max": 1000,
+    "capacidad_max": 100000,
     "cosechadora_population": 1,
     "tractor_population": 2,
     "inner_radius": 1,  # 3
