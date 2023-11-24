@@ -57,23 +57,8 @@ class Cosechadora(ap.Agent):
             distancia = np.linalg.norm(direccion)
             direccion = normalize(direccion)
 
-            # print(f"Cosechadora: {self}, Direccion: {direction}, Posición: {self.pos}")
-            # print(f"\tTarget: {self.target_position}\n")
-
             # Moverse hacia la posición objetivo
             if distancia >= self.velocity:
-                # if (
-                #     self.target_position[0] > self.p.dimensiones_campo - 1
-                #     or self.target_position[0] < 0
-                #     or self.target_position[1] > self.p.dimensiones_campo - 1
-                #     or self.target_position[1] < 0
-                # ):
-                #     # print("\t\tOUT OF BOUNDS REWARD: -100")
-                #     reward = -100
-                #     done = True
-                #     self.moving = False
-                #     return reward, done
-
                 self.space.move_to(self, self.target_position)
                 # self.space.move_by(self, direccion * self.velocity)
 
@@ -84,8 +69,8 @@ class Cosechadora(ap.Agent):
                     or self.target_position[1] > self.p.dimensiones_campo - 1
                     or self.target_position[1] < 0
                 ):
-                    # print("\t\tOUT OF BOUNDS REWARD: -100")
-                    reward = -1000
+                    print("\t\tOUT OF BOUNDS")
+                    reward = self.p.rewards_values["out_of_bounds"]
                     done = True
                     self.moving = False
                     return reward, done
@@ -93,24 +78,24 @@ class Cosechadora(ap.Agent):
                 for nb in self.neighbors(self, distance=self.p.harvest_radius):
                     if nb.identificador == "celda":
                         if nb.pertenencia != self.id:
-                            # print("\t\tCELDA DE OTRA COSECHADORA: -30")
-                            reward = -50
+                            print("\t\tCELDA DE OTRA COSECHADORA")
+                            reward = self.p.rewards_values["celda_otra"]
                             done = False
                             break
                         elif nb.isCosechado:
-                            # print("\t\tCELDA COSECHADA: -10")
-                            reward = -300
+                            print("\t\tCELDA COSECHADA")
+                            reward = self.p.rewards_values["celda_cosechada"]
                             done = False
                             break
                         # Si celda no ha sido cosechada
                         elif not nb.isCosechado:
-                            # print("\t\tNORMAL: -1")
-                            reward = -1
+                            print("\t\tNORMAL")
+                            reward = self.p.rewards_values["normal"]
                             done = False
                             break
                         elif nb.identificador == "cosechadora":
-                            # print("\t\COLISION: -100")
-                            reward = -1000
+                            print("\t\COLISION")
+                            reward = self.p.rewards_values["colision"]
                             done = True
                             break
 
@@ -139,8 +124,8 @@ class Cosechadora(ap.Agent):
                     or self.target_position[1] > self.p.dimensiones_campo - 1
                     or self.target_position[1] < 0
                 ):
-                    # print("\t\tOUT OF BOUNDS REWARD: -100")
-                    reward = -1000
+                    print("\t\tOUT OF BOUNDS REWARD")
+                    reward = self.p.rewards_values["out_of_bounds"]
                     done = True
                     self.moving = False
                     return reward, done
@@ -297,6 +282,8 @@ class FieldModel(ap.Model):
                 # celda.setup_pos(self.space)
                 self.space.positions[celda] = (x, y)
 
+        self.cosechadoras.cosechar()
+
     # Envia las posiciones de los agentes a través de WebSocket
     async def send_positions(self, websocket):
         positions_cosechadoras = {
@@ -340,6 +327,8 @@ class FieldModel(ap.Model):
         for celda in self.celdas_campo:
             celda.isCosechado = False
 
+        self.cosechadoras.cosechar()
+
     def q_learning(self):
         print("\n**************\nQLEARNING\n**************\n")
         num_states = self.p.dimensiones_campo**2
@@ -375,8 +364,17 @@ class FieldModel(ap.Model):
                         + cosechadora.pos[0]
                     )
 
-                    if action in [0, 1]:
-                        reward += 5
+                    if cosechadora.pos[0] % 2 == 0 and action == 0:
+                        reward += self.p.rewards_values["up"]
+                    elif cosechadora.pos[0] % 2 == 1 and action == 1:
+                        reward += self.p.rewards_values["down"]
+
+                    if (
+                        cosechadora.pos[1] == self.p.dimensiones_campo - 1
+                        or cosechadora.pos[1] == 0
+                    ) and action in [2, 3]:
+                        reward += self.p.rewards_values["sides"]
+
                     reward_sum += reward
 
                     # La ecuación de Bellman se define como:
@@ -436,38 +434,6 @@ class FieldModel(ap.Model):
 
     # Ejecuta la simulación y WebSocket
     async def run_simulation_with_websocket(self, q_values):
-        # self.space = ap.Space(self, shape=[self.p.size] * self.p.ndim)
-        # self.cosechadoras = ap.AgentList(
-        #     self, self.p.cosechadora_population, Cosechadora
-        # )
-        # self.tractors = ap.AgentList(self, self.p.tractor_population, Tractor)
-        # self.space.add_agents(self.cosechadoras, positions=[np.array([0, 0])])
-        # self.cosechadoras.setup_pos(self.space)
-
-        # # Crear celdas_campo sin agregarlas al espacio aún
-        # self.celdas_campo = ap.AgentList(
-        #     self, self.p.dimensiones_campo**2, CeldaCampo
-        # )
-
-        # self.celdas_campo.setup_pertenencia(self.cosechadoras[0].id)
-
-        # for i in range(self.p.tractor_population):
-        #     self.space.positions[self.tractors[i]] = np.ndarray(
-        #         (2,), buffer=np.array([0, 0]), dtype=int
-        #     )
-        # self.tractors.setup_pos(self.space)
-
-        # # Asignar manualmente posiciones a cada celda_campo
-        # grid_size = self.p.dimensiones_campo
-        # for x in range(grid_size):
-        #     for y in range(grid_size):
-        #         index = x * grid_size + y
-        #         celda = self.celdas_campo[index]
-        #         # celda.setup_pos(self.space)
-        #         self.space.positions[celda] = (x, y)
-
-        self.reset()
-
         loop = asyncio.get_running_loop()
 
         # Habilitar tracemalloc dentro del bucle de eventos
@@ -514,13 +480,26 @@ parameters2D = {
     "exploration_rate_upper": 0.1,
     "exploration_rate_lower": 0.1,
     "exploration_rate_decrease": 0.05,
-    "num_episodes": 10000,
+    "num_episodes": 500,
     "learning_rate": 0.5,  # 0.5
     "gamma": 0.9,
+    "rewards_values": {
+        "normal": -1,
+        "celda_cosechada": -3,
+        "celda_otra": -5,
+        "colision": -100,
+        "out_of_bounds": -100,
+        "up": 2,
+        "down": 2,
+        "sides": 1,
+    },
 }
 
 # Crea una instancia del modelo y ejecuta la simulación con WebSocket
 model = FieldModel(parameters2D)
 model.setup()
 q_learning_rewards, q_values = model.q_learning()
-asyncio.run(model.run_simulation_with_websocket(q_values))
+
+model_2 = FieldModel(parameters2D)
+model_2.setup()
+asyncio.run(model_2.run_simulation_with_websocket(q_values))
