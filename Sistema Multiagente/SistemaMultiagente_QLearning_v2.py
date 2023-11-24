@@ -375,10 +375,6 @@ class FieldModel(ap.Model):
                         + cosechadora.pos[0]
                     )
 
-                    if action in [0, 1]:
-                        reward += 5
-                    reward_sum += reward
-
                     # La ecuación de Bellman se define como:
                     # Q(s,a) = r + gamma * max(Q(s',a')) - Q(s,a)
                     if done:
@@ -514,7 +510,7 @@ parameters2D = {
     "exploration_rate_upper": 0.1,
     "exploration_rate_lower": 0.1,
     "exploration_rate_decrease": 0.05,
-    "num_episodes": 10000,
+    "num_episodes": 500,
     "learning_rate": 0.5,  # 0.5
     "gamma": 0.9,
 }

@@ -22,7 +22,7 @@ def normalize(v):
 # Clase que representa una celda en el campo
 class CeldaCampo(ap.Agent):
     def setup(self):
-        self.isCosechado = False
+        self.isCosechado = True
         self.densidad = self.p.densidad
         self.identificador = "celda"
 
@@ -31,7 +31,7 @@ class CeldaCampo(ap.Agent):
 
     def cosechar(self):
         if not self.isCosechado:
-            self.isCosechado = True
+            self.isCosechado = False
             return self.densidad
         else:
             return 0
@@ -364,16 +364,15 @@ class FieldModel(ap.Model):
                         + cosechadora.pos[0]
                     )
 
-                    if cosechadora.pos[0] % 2 == 0 and action == 0:
-                        reward += self.p.rewards_values["up"]
-                    elif cosechadora.pos[0] % 2 == 1 and action == 1:
-                        reward += self.p.rewards_values["down"]
-
                     if (
                         cosechadora.pos[1] == self.p.dimensiones_campo - 1
                         or cosechadora.pos[1] == 0
-                    ) and action in [2, 3]:
+                    ) and action in [3]:
                         reward += self.p.rewards_values["sides"]
+                    elif cosechadora.pos[0] % 2 == 0 and action == 0:
+                        reward += self.p.rewards_values["up"]
+                    elif cosechadora.pos[0] % 2 == 1 and action == 1:
+                        reward += self.p.rewards_values["down"]
 
                     reward_sum += reward
 
@@ -415,6 +414,8 @@ class FieldModel(ap.Model):
                         + cosechadora.pos[0]
                     )
                     action = self.egreedy_policy(q_values, state, 0.0)
+
+                    print(q_values[state])
 
                     reward = 0
                     while reward == 0:
@@ -458,8 +459,8 @@ class FieldModel(ap.Model):
 
 # Parámetros del modelo en 2D
 parameters2D = {
-    "size": 5,
-    "dimensiones_campo": 5,
+    "size": 50,
+    "dimensiones_campo": 50,
     "seed": 123,
     "steps": 1000,
     "ndim": 2,
@@ -480,7 +481,7 @@ parameters2D = {
     "exploration_rate_upper": 0.1,
     "exploration_rate_lower": 0.1,
     "exploration_rate_decrease": 0.05,
-    "num_episodes": 500,
+    "num_episodes": 200,
     "learning_rate": 0.5,  # 0.5
     "gamma": 0.9,
     "rewards_values": {
