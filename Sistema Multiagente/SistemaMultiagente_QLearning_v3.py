@@ -481,7 +481,7 @@ parameters2D = {
     "exploration_rate_lower": 0.1,
     "exploration_rate_decrease": 0.05,
     "num_episodes": 200,
-    "learning_rate": 0.5,  # 0.5
+    "learning_rate": 0.1,  # 0.5
     "gamma": 0.9,
     "rewards_values": {
         "normal": -1,
