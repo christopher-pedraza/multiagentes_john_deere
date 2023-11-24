@@ -31,7 +31,7 @@ class CeldaCampo(ap.Agent):
 
     def cosechar(self):
         if not self.isCosechado:
-            self.isCosechado = False
+            self.isCosechado = True
             return self.densidad
         else:
             return 0
@@ -364,15 +364,16 @@ class FieldModel(ap.Model):
                         + cosechadora.pos[0]
                     )
 
-                    if (
-                        cosechadora.pos[1] == self.p.dimensiones_campo - 1
-                        or cosechadora.pos[1] == 0
-                    ) and action in [2, 3]:
-                        reward += self.p.rewards_values["sides"]
-                    elif cosechadora.pos[0] % 2 == 0 and action == 0:
+                    if cosechadora.pos[0] % 2 == 0 and action == 0:
                         reward += self.p.rewards_values["up"]
                     elif cosechadora.pos[0] % 2 == 1 and action == 1:
                         reward += self.p.rewards_values["down"]
+
+                    if (
+                        cosechadora.pos[1] == self.p.dimensiones_campo - 1
+                        or cosechadora.pos[1] == 0
+                    ) and action == 3:
+                        reward += self.p.rewards_values["sides"]
 
                     reward_sum += reward
 
@@ -457,8 +458,8 @@ class FieldModel(ap.Model):
 
 # Parámetros del modelo en 2D
 parameters2D = {
-    "size": 50,
-    "dimensiones_campo": 50,
+    "size": 20,
+    "dimensiones_campo": 20,
     "seed": 123,
     "steps": 1000,
     "ndim": 2,
@@ -484,13 +485,13 @@ parameters2D = {
     "gamma": 0.9,
     "rewards_values": {
         "normal": -1,
-        "celda_cosechada": -3,
-        "celda_otra": -5,
+        "celda_cosechada": -5,
+        "celda_otra": -10,
         "colision": -100,
         "out_of_bounds": -100,
-        "up": 2,
-        "down": 2,
-        "sides": 1,
+        "up": 4,
+        "down": 4,
+        "sides": 2,
     },
 }
 
