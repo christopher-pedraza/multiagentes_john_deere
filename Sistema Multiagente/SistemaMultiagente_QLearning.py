@@ -166,15 +166,19 @@ class Cosechadora(ap.Agent):
 # Clase que representa un tractor en el campo
 class Tractor(ap.Agent):
     def setup(self):
-        print("TRACTOR SETUP")
         self.velocity = 1.0
         self.identificador = "tractor"
         self.target_position = np.ndarray((2,), buffer=np.array([0, 0]), dtype=int)
         self.moving = False
 
     def move(self):
-        print("POSICION TRACTOR", self.pos, "TARGET", self.target_position)
         if self.moving:
+            print(
+                "YA ME ESTOY MOVIENDOOO. POS:",
+                self.pos,
+                "TARGET:",
+                self.target_position,
+            )
             # Calcular el vector de dirección hacia la posición objetivo
             direccion = self.target_position - self.pos
             distancia = np.linalg.norm(direccion)
@@ -182,11 +186,8 @@ class Tractor(ap.Agent):
 
             # Moverse hacia la posición objetivo
             if distancia >= self.velocity:
-                print("MOVIENDOSE")
-                print("DIRECCION", direccion, "VELOCIDAD", self.velocity)
                 self.space.move_by(self, direccion * self.velocity)
             else:
-                print("LLEGUE!!")
                 # Si está cerca del objetivo, ajustar a la posición objetivo y dejar de moverse
                 self.moving = False
                 for nb in self.neighbors(self, distance=self.p.tractor_radius):
@@ -200,14 +201,12 @@ class Tractor(ap.Agent):
         else:
             for nb in self.neighbors(self, distance=self.p.dimensiones_campo**2):
                 if nb.identificador == "cosechadora" and nb.estado == "lleno":
-                    print("COSECHADORA ENCONTRADA")
                     self.target_position = nb.pos
                     self.moving = True
                     nb.estado = "esperando"
                     break
 
     def setup_pos(self, space):
-        print("TRACTOR SETUP POS")
         self.space = space
         self.neighbors = space.neighbors
         self.pos = space.positions[self]
@@ -288,23 +287,37 @@ class FieldModel(ap.Model):
         self.cosechadoras.setup()
         self.tractors.setup()
 
-        for i in range(self.p.tractor_population):
-            self.space.positions[self.tractors[i]] = np.ndarray(
-                (2,), buffer=np.array([0, 0]), dtype=int
-            )
-        self.tractors.setup_pos(self.space)
+        for cosechadora in self.cosechadoras:
+            moving = True
+            while moving:
+                direccion = cosechadora.pos_inicial - cosechadora.pos
+                distancia = np.linalg.norm(direccion)
+                direccion = normalize(direccion)
 
-        for i in range(self.p.cosechadora_population):
-            self.space.positions[self.cosechadoras[i]] = np.ndarray(
-                (2,), buffer=np.array([0, 0]), dtype=int
-            )
-        self.cosechadoras.setup_pos(self.space)
+                # Moverse hacia la posición objetivo
+                if distancia >= cosechadora.velocity:
+                    # self.space.move_to(self, self.target_position)
+                    cosechadora.space.move_by(
+                        cosechadora, direccion * cosechadora.velocity
+                    )
+                else:
+                    moving = False
+            # self.space.move_to(cosechadora, cosechadora.pos_inicial)
+        for tractor in self.tractors:
+            moving = True
+            while moving:
+                print(f"Pos de tractor {tractor.id}: {tractor.pos}")
+                direccion = tractor.pos_inicial - tractor.pos
+                distancia = np.linalg.norm(direccion)
+                direccion = normalize(direccion)
 
-        # for cosechadora in self.cosechadoras:
-        #     while cosechadora.pos != cosechadora.pos_inicial:
-        #         self.cosechadora.move_by()
-        # for tractor in self.tractors:
-        #     self.space.move_to(tractor, tractor.pos_inicial)
+                # Moverse hacia la posición objetivo
+                if distancia >= tractor.velocity:
+                    # self.space.move_to(self, self.target_position)
+                    tractor.space.move_by(tractor, direccion * tractor.velocity)
+                else:
+                    moving = False
+            # self.space.move_to(tractor, tractor.pos_inicial)
         for celda in self.celdas_campo:
             celda.isCosechado = False
 
