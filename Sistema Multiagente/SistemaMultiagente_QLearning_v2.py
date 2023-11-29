@@ -465,6 +465,115 @@ class FieldModel(ap.Model):
             server.close()
             await server.wait_closed()
 
+    async def ws_handler_inner_qlearning(self, websocket):
+        try:
+            print("\n**************\nQLEARNING\n**************\n")
+            num_states = self.p.dimensiones_campo**2
+            num_actions = 4
+            q_values = np.zeros((num_states, num_actions))
+            ep_rewards = []
+            direcciones = ["up", "down", "left", "right"]
+            done = False
+            reward_sum = 0
+
+            for i in range(self.p.num_episodes):
+                self.reset()
+                done = False
+                reward_sum = 0
+                print(f"Episodio {i}")
+                while not done:
+                    for cosechadora in self.cosechadoras:
+                        if cosechadora.estado == "lleno":
+                            continue
+
+                        state = (
+                            cosechadora.pos[1] * self.p.dimensiones_campo
+                            + cosechadora.pos[0]
+                        )
+
+                        action = self.egreedy_policy(
+                            q_values, state, self.p.exploration_rate_upper
+                        )
+
+                        reward = 0
+                        while reward == 0 and cosechadora.velocity != 0.0:
+                            print("CICLOOOO")
+                            reward, done = cosechadora.move(direcciones[action])
+
+                        if cosechadora.estado == "lleno":
+                            continue
+
+                        next_state = (
+                            cosechadora.pos[1] * self.p.dimensiones_campo
+                            + cosechadora.pos[0]
+                        )
+
+                        if cosechadora.pos[0] % 2 == 0 and action == 0:
+                            reward += self.p.rewards_values["up"]
+                        elif cosechadora.pos[0] % 2 == 1 and action == 1:
+                            reward += self.p.rewards_values["down"]
+
+                        if (
+                            cosechadora.pos[1] == self.p.dimensiones_campo - 1
+                            or cosechadora.pos[1] == 0
+                        ) and action == 3:
+                            reward += self.p.rewards_values["sides"]
+
+                        reward_sum += reward
+
+                        # La ecuación de Bellman se define como:
+                        # Q(s,a) = r + gamma * max(Q(s',a')) - Q(s,a)
+                        if done:
+                            td_target = reward
+                        else:
+                            td_target = reward + self.p.gamma * np.max(
+                                q_values[next_state]
+                            )
+                        td_error = td_target - q_values[state][action]
+                        # Actualiza el valor Q para el estado y acción actuales con el valor
+                        # de la ecuación de Bellman.
+                        q_values[state][action] += self.p.learning_rate * td_error
+
+                    self.cosechadoras.cosechar()
+                    self.tractors.move()
+
+                    await self.send_positions(websocket)
+                    await asyncio.sleep(0.1)
+
+                if self.p.exploration_rate_upper > self.p.exploration_rate_lower:
+                    self.p.exploration_rate_upper -= self.p.exploration_rate_decrease
+
+                ep_rewards.append(reward_sum)
+
+            print(f"EPISODE REWARDS: {ep_rewards}, \nQ_VALUES: \n{q_values}")
+        except websockets.exceptions.ConnectionClosed:
+            pass
+
+    async def ws_handler_qlearning(self, websocket, path):
+        await self.ws_handler_inner_qlearning(websocket)
+
+    async def run_qlearning_with_websocket(self):
+        loop = asyncio.get_running_loop()
+
+        # Habilitar tracemalloc dentro del bucle de eventos
+        tracemalloc.start()
+
+        # Inicia el servidor WebSocket
+        server = await websockets.serve(
+            lambda ws, path: self.ws_handler_qlearning(ws, path),
+            "localhost",
+            8765,
+        )
+
+        try:
+            for _ in range(self.p.steps):
+                self.step()
+                await asyncio.sleep(0.1)
+        finally:
+            # Cierre del servidor WebSocket
+            server.close()
+            await server.wait_closed()
+
 
 # Parámetros del modelo en 2D
 parameters2D = {
@@ -508,8 +617,4 @@ parameters2D = {
 # Crea una instancia del modelo y ejecuta la simulación con WebSocket
 model = FieldModel(parameters2D)
 model.setup()
-q_learning_rewards, q_values = model.q_learning()
-
-model_2 = FieldModel(parameters2D)
-model_2.setup()
-asyncio.run(model_2.run_simulation_with_websocket(q_values))
+asyncio.run(model.run_qlearning_with_websocket())
