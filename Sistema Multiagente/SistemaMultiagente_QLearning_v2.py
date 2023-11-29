@@ -25,6 +25,7 @@ class CeldaCampo(ap.Agent):
         self.isCosechado = False
         self.densidad = self.p.densidad
         self.identificador = "celda"
+        self.pertenencia = None
 
     def setup_pertenencia(self, id_cosechadora):
         self.pertenencia = id_cosechadora
@@ -166,7 +167,7 @@ class Cosechadora(ap.Agent):
 # Clase que representa un tractor en el campo
 class Tractor(ap.Agent):
     def setup(self):
-        self.velocity = 1.0
+        self.velocity = 1.5
         self.identificador = "tractor"
         self.target_position = np.ndarray((2,), buffer=np.array([0, 0]), dtype=int)
         self.moving = False
@@ -230,9 +231,18 @@ class FieldModel(ap.Model):
             self, self.p.cosechadora_population, Cosechadora
         )
         self.tractors = ap.AgentList(self, self.p.tractor_population, Tractor)
+
+        # Dividir el campo en la cnaitdad de cosechadoras
+        size_segment = self.p.dimensiones_campo // self.p.cosechadora_population
+        positions = []
+        for i in range(self.p.cosechadora_population):
+            positions.append(
+                np.ndarray((2,), buffer=np.array([i * size_segment, 0]), dtype=int)
+            )
+
         self.space.add_agents(
             self.cosechadoras,
-            positions=[np.ndarray((2,), buffer=np.array([0, 0]), dtype=int)],
+            positions=positions,
         )
         self.cosechadoras.setup_pos(self.space)
 
@@ -240,8 +250,6 @@ class FieldModel(ap.Model):
         self.celdas_campo = ap.AgentList(
             self, self.p.dimensiones_campo**2, CeldaCampo
         )
-
-        self.celdas_campo.setup_pertenencia(self.cosechadoras[0].id)
 
         for i in range(self.p.tractor_population):
             self.space.positions[self.tractors[i]] = np.ndarray(
@@ -251,13 +259,22 @@ class FieldModel(ap.Model):
 
         # Asignar manualmente posiciones a cada celda_campo
         grid_size = self.p.dimensiones_campo
+        contador = size_segment
+        cosechadora_index = 0
         for x in range(grid_size):
+            if contador == 0 and cosechadora_index < self.p.cosechadora_population - 1:
+                contador = size_segment
+                cosechadora_index += 1
             for y in range(grid_size):
                 index = x * grid_size + y
                 celda = self.celdas_campo[index]
-                # celda.setup_pos(self.space)
                 self.space.positions[celda] = (x, y)
 
+                # Asignar pertenencia a cada celda de campo con respecto al segmento en el que este
+                celda.setup_pertenencia(self.cosechadoras[cosechadora_index].id)
+                print(f"({x},{y}) -> {cosechadora_index}")
+
+            contador -= 1
         self.cosechadoras.cosechar()
 
     # Envia las posiciones de los agentes a través de WebSocket
@@ -538,7 +555,7 @@ class FieldModel(ap.Model):
                     self.tractors.move()
 
                     await self.send_positions(websocket)
-                    await asyncio.sleep(0.1)
+                    await asyncio.sleep(1)
 
                 if self.p.exploration_rate_upper > self.p.exploration_rate_lower:
                     self.p.exploration_rate_upper -= self.p.exploration_rate_decrease
@@ -577,20 +594,20 @@ class FieldModel(ap.Model):
 
 # Parámetros del modelo en 2D
 parameters2D = {
-    "size": 20,
-    "dimensiones_campo": 20,
+    "size": 50,
+    "dimensiones_campo": 50,
     "seed": 123,
     "steps": 1000,
     "ndim": 2,
     "densidad": 10,
-    "capacidad_max": 100,
-    "cosechadora_population": 1,
-    "tractor_population": 1,
+    "capacidad_max": 500,
+    "cosechadora_population": 3,
+    "tractor_population": 5,
     "inner_radius": 1,  # 3
     "outer_radius": 3,  # 10
     "harvest_radius": 0.2,  # 1
     "border_distance": 1,  # 10
-    "tractor_radius": 1,
+    "tractor_radius": 2,
     "cohesion_strength": 0.005,
     "separation_strength": 0.1,
     "alignment_strength": 0.3,
