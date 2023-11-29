@@ -555,7 +555,7 @@ class FieldModel(ap.Model):
                     self.tractors.move()
 
                     await self.send_positions(websocket)
-                    await asyncio.sleep(0.1)
+                    await asyncio.sleep(1)
 
                 if self.p.exploration_rate_upper > self.p.exploration_rate_lower:
                     self.p.exploration_rate_upper -= self.p.exploration_rate_decrease
