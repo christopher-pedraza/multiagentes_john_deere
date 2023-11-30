@@ -81,29 +81,20 @@ public class AgentController : MonoBehaviour
                 {
                     agentType = "Tractor";
                 }
-                else if (agentName.StartsWith("Campo"))
-                {
-                    agentType = "Campo";
-                }
-                else if (agentName.StartsWith("Rotacion"))
-                {
-                    agentType = "Rotacion";
-                }
 
+                // Registra información para depuración
+                Debug.Log($"Agente: {agentName}, Tipo: {agentType}, Posición: {positionData[0]}, {positionData[1]}");
 
-                if (!agentType.Equals("Campo"))
+                MainThreadDispatcher.Instance.DispatchToMainThread(() =>
                 {
-                    // Registra información para depuración
-                    Debug.Log($"Agente: {agentName}, Tipo: {agentType}, Posición: {positionData[0]}, {positionData[1]}");
-
-                    MainThreadDispatcher.Instance.DispatchToMainThread(() =>
+                    // Verifica si el agente ya está en el diccionario
+                    if (agents.ContainsKey(agentName))
                     {
-                        // Verifica si el agente ya está en el diccionario
-                        if (agents.ContainsKey(agentName))
-                        {
-                            // Actualiza la posición del agente existente
-                            agents[agentName].transform.position = new Vector3(positionData[0], 0.0f, positionData[1]);
+                        // Actualiza la posición del agente existente
+                        agents[agentName].transform.position = new Vector3(positionData[0], 0.0f, positionData[1]);
 
+                        if (agentType == "Cosechadora")
+                        {
                             Debug.Log($"Actualizando posición del agente existente: {agentName}");
                             // Izquierda
                             if (positionData[2] == 2)
@@ -125,32 +116,32 @@ public class AgentController : MonoBehaviour
                                 Debug.Log($"{agentName} roto a la: 180");
                             }
                         }
-                        else
+                    }
+                    else
+                    {
+                        if (cosechadoraPrefab != null && tractorPrefab != null)
                         {
-                            if (cosechadoraPrefab != null && tractorPrefab != null)
+                            // Instancia un nuevo agente según el tipo
+                            GameObject newAgent;
+                            if (agentType == "Cosechadora")
                             {
-                                // Instancia un nuevo agente según el tipo
-                                GameObject newAgent;
-                                if (agentType == "Cosechadora")
-                                {
-                                    newAgent = Instantiate(cosechadoraPrefab, new Vector3(positionData[0], 0.0f, positionData[1]), Quaternion.identity);
-                                }
-                                else if (agentType == "Tractor")
-                                {
-                                    newAgent = Instantiate(tractorPrefab, new Vector3(positionData[0], 0.0f, positionData[1]), Quaternion.identity);
-                                }
-                                else
-                                {
-                                    Debug.LogError($"Tipo de agente desconocido: {agentType}");
-                                    return;
-                                }
-
-                                agents.Add(agentName, newAgent);
-                                Debug.Log($"Instanciando nuevo agente: {agentName}");
+                                newAgent = Instantiate(cosechadoraPrefab, new Vector3(positionData[0], 0.0f, positionData[1]), Quaternion.identity);
                             }
+                            else if (agentType == "Tractor")
+                            {
+                                newAgent = Instantiate(tractorPrefab, new Vector3(positionData[0], 0.0f, positionData[1]), Quaternion.identity);
+                            }
+                            else
+                            {
+                                Debug.LogError($"Tipo de agente desconocido: {agentType}");
+                                return;
+                            }
+
+                            agents.Add(agentName, newAgent);
+                            Debug.Log($"Instanciando nuevo agente: {agentName}");
                         }
-                    });
-                }
+                    }
+                });
             }
         }
         catch (Exception ex)
