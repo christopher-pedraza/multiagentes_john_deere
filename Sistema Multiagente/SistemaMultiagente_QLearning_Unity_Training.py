@@ -241,7 +241,6 @@ class Tractor(ap.Agent):
             )
             # Calcular el vector de dirección hacia la posición objetivo
             if abs(self.pos[0] - self.target_position_x) >= 1.5:
-                
                 direccion = (
                     np.ndarray(
                         (2,), buffer=np.array([self.target_position_x, 0]), dtype=int
@@ -276,7 +275,10 @@ class Tractor(ap.Agent):
                     # Si está cerca del objetivo, ajustar a la posición objetivo y dejar de moverse
                     self.moving = False
                     for nb in self.neighbors(self, distance=self.p.tractor_radius):
-                        if nb.identificador == "cosechadora" and nb.estado == "esperando":
+                        if (
+                            nb.identificador == "cosechadora"
+                            and nb.estado == "esperando"
+                        ):
                             nb.capacidad = 0
                             nb.estado = "cosechando"
                             nb.velocity = 1.0
@@ -637,7 +639,7 @@ class FieldModel(ap.Model):
                     self.tractors.move()
 
                     await self.send_positions(websocket)
-                    await asyncio.sleep(0.25)
+                    await asyncio.sleep(0.1)
 
                 if self.p.exploration_rate_upper > self.p.exploration_rate_lower:
                     self.p.exploration_rate_upper -= self.p.exploration_rate_decrease
@@ -682,9 +684,9 @@ parameters2D = {
     "steps": 1000,
     "ndim": 2,
     "densidad": 10,
-    "capacidad_max": 20,
-    "cosechadora_population": 3,
-    "tractor_population": 5,
+    "capacidad_max": 100,
+    "cosechadora_population": 10,
+    "tractor_population": 10,
     "inner_radius": 1,  # 3
     "outer_radius": 3,  # 10
     "harvest_radius": 0.2,  # 1

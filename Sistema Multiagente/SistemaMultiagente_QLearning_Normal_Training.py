@@ -609,7 +609,7 @@ class FieldModel(ap.Model):
                 self.cosechadoras.cosechar()
                 self.tractors.move()
                 await self.send_positions(websocket)
-                await asyncio.sleep(0.5)  # Ajustar la frecuencia según sea necesario
+                await asyncio.sleep(0.1)  # Ajustar la frecuencia según sea necesario
         except websockets.exceptions.ConnectionClosed:
             pass
 
@@ -649,9 +649,9 @@ parameters2D = {
     "steps": 1000,
     "ndim": 2,
     "densidad": 10,
-    "capacidad_max": 100,
-    "cosechadora_population": 2,
-    "tractor_population": 2,
+    "capacidad_max": 1500,
+    "cosechadora_population": 1,
+    "tractor_population": 1,
     "inner_radius": 1,  # 3
     "outer_radius": 3,  # 10
     "harvest_radius": 0.2,  # 1

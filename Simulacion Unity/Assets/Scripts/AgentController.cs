@@ -93,29 +93,29 @@ public class AgentController : MonoBehaviour
                         // Actualiza la posición del agente existente
                         agents[agentName].transform.position = new Vector3(positionData[0], 0.0f, positionData[1]);
 
-                        if (agentType == "Cosechadora" || agentType == "Tractor")
-                        {
-                            Debug.Log($"Actualizando posición del agente existente: {agentName}");
-                            // Izquierda
-                            if (positionData[2] == 2)
-                            {
-                                agents[agentName].transform.Rotate(0, 90, 0);
-                                Debug.Log($"{agentName} roto a la: IZQUIERDA");
-                            }
-                            // Derecha
-                            else if (positionData[2] == 3)
-                            {
-                                agents[agentName].transform.Rotate(0, -90, 0);
-                                Debug.Log($"{agentName} roto a la: DERECHA");
-                            }
-                            // 180
-                            else if (positionData[2] == 4)
-                            {
-                                agents[agentName].transform.Rotate(0, 90, 0);
-                                agents[agentName].transform.Rotate(0, 90, 0);
-                                Debug.Log($"{agentName} roto a la: 180");
-                            }
-                        }
+                        // if (agentType == "Cosechadora" || agentType == "Tractor")
+                        // {
+                        //     Debug.Log($"Actualizando posición del agente existente: {agentName}");
+                        //     // Izquierda
+                        //     if (positionData[2] == 2)
+                        //     {
+                        //         agents[agentName].transform.Rotate(0, 90, 0);
+                        //         Debug.Log($"{agentName} roto a la: IZQUIERDA");
+                        //     }
+                        //     // Derecha
+                        //     else if (positionData[2] == 3)
+                        //     {
+                        //         agents[agentName].transform.Rotate(0, -90, 0);
+                        //         Debug.Log($"{agentName} roto a la: DERECHA");
+                        //     }
+                        //     // 180
+                        //     else if (positionData[2] == 4)
+                        //     {
+                        //         agents[agentName].transform.Rotate(0, 90, 0);
+                        //         agents[agentName].transform.Rotate(0, 90, 0);
+                        //         Debug.Log($"{agentName} roto a la: 180");
+                        //     }
+                        // }
                     }
                     else
                     {
