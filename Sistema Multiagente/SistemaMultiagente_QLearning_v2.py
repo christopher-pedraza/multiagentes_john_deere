@@ -4,7 +4,6 @@ import websockets
 import agentpy as ap
 import numpy as np
 import json
-import random
 from copy import deepcopy
 
 # Inicia la herramienta de tracemalloc para el seguimiento de la asignación de memoria
@@ -47,6 +46,20 @@ class Cosechadora(ap.Agent):
         self.capacidad = 0
         self.estado = "cosechando"  # cosechando / lleno / esperando
         self.moving = False
+        # -1: None
+        # 0: Up
+        # 1: Down
+        # 2: Left
+        # 3: Right
+        # 4: Complete
+        self.current_direction = 0
+        # -1: None
+        # 0: Up
+        # 1: Down
+        # 2: Left
+        # 3: Right
+        # 4: Complete
+        self.previous_rotation = -1
 
     def move(self, direction):
         reward = 0
@@ -104,6 +117,49 @@ class Cosechadora(ap.Agent):
                 self.moving = False
         else:
             if self.estado == "cosechando":
+                rot = {
+                    "NONE": -1,
+                    "up": 0,
+                    "down": 1,
+                    "left": 2,
+                    "right": 3,
+                    "complete": 4,
+                }
+
+                self.previous_rotation = direction
+                if self.current_direction == rot["up"] and direction == "left":
+                    self.previous_rotation = rot["left"]
+                    self.current_direction = rot["left"]
+                elif self.current_direction == rot["up"] and direction == "right":
+                    self.previous_rotation = rot["right"]
+                    self.current_direction = rot["right"]
+                elif self.current_direction == rot["down"] and direction == "left":
+                    self.previous_rotation = rot["right"]
+                    self.current_direction = rot["left"]
+                elif self.current_direction == rot["down"] and direction == "right":
+                    self.previous_rotation = rot["left"]
+                    self.current_direction = rot["right"]
+                elif self.current_direction == rot["left"] and direction == "up":
+                    self.previous_rotation = rot["right"]
+                    self.current_direction = rot["up"]
+                elif self.current_direction == rot["left"] and direction == "down":
+                    self.previous_rotation = rot["left"]
+                    self.current_direction = rot["down"]
+                elif self.current_direction == rot["right"] and direction == "up":
+                    self.previous_rotation = rot["left"]
+                    self.current_direction = rot["up"]
+                elif self.current_direction == rot["right"] and direction == "down":
+                    self.previous_rotation = rot["right"]
+                    self.current_direction = rot["down"]
+                elif self.current_direction == rot["up"] and direction == "down":
+                    self.previous_rotation = rot["complete"]
+                    self.current_direction = rot["down"]
+                elif self.current_direction == rot["down"] and direction == "up":
+                    self.previous_rotation = rot["complete"]
+                    self.current_direction = rot["up"]
+                else:
+                    self.previous_rotation = rot["NONE"]
+
                 x, y = self.pos[0], self.pos[1]
                 if direction == "up":
                     # print("Up")
@@ -280,22 +336,31 @@ class FieldModel(ap.Model):
     # Envia las posiciones de los agentes a través de WebSocket
     async def send_positions(self, websocket):
         positions_cosechadoras = {
-            f"Cosechadora_{str(agent)}": agent.pos.tolist()
+            f"Cosechadora_{str(agent)}": [
+                float(agent.pos[0]),
+                float(agent.pos[1]),
+                float(agent.previous_rotation),
+            ]
             for agent in self.cosechadoras
         }
         capacidad_cosechadoras = {
             f"Capacidad_{str(agent)}": [float(agent.capacidad)]
             for agent in self.cosechadoras
         }
+        # rotaciones_cosechadoras = {
+        #     f"Rotacion_{str(agent)}": [float(agent.previous_rotation)]
+        #     for agent in self.cosechadoras
+        # }
         positions_tractors = {
             f"Tractor_{str(agent)}": agent.pos.tolist() for agent in self.tractors
         }
-        positions = {
+        data = {
             **positions_cosechadoras,
+            # **rotaciones_cosechadoras,
             **capacidad_cosechadoras,
             **positions_tractors,
         }
-        await websocket.send(json.dumps(positions))
+        await websocket.send(json.dumps(data))
 
     def egreedy_policy(self, q_values, state, epsilon=0.1):
         # Se verifica si el valor epsilon es mayor a un número aleatorio entre 0 y 1
@@ -555,7 +620,7 @@ class FieldModel(ap.Model):
                     self.tractors.move()
 
                     await self.send_positions(websocket)
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(0.5)
 
                 if self.p.exploration_rate_upper > self.p.exploration_rate_lower:
                     self.p.exploration_rate_upper -= self.p.exploration_rate_decrease

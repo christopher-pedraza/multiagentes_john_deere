@@ -5,7 +5,7 @@ using WebSocketSharp;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 
-public class BoidsController : MonoBehaviour
+public class AgentController : MonoBehaviour
 {
     // Prefabs para agentes en Unity
     public GameObject cosechadoraPrefab;
@@ -81,10 +81,15 @@ public class BoidsController : MonoBehaviour
                 {
                     agentType = "Tractor";
                 }
-                else
+                else if (agentName.StartsWith("Campo"))
                 {
                     agentType = "Campo";
                 }
+                else if (agentName.StartsWith("Rotacion"))
+                {
+                    agentType = "Rotacion";
+                }
+
 
                 if (!agentType.Equals("Campo"))
                 {
@@ -98,7 +103,27 @@ public class BoidsController : MonoBehaviour
                         {
                             // Actualiza la posición del agente existente
                             agents[agentName].transform.position = new Vector3(positionData[0], 0.0f, positionData[1]);
+
                             Debug.Log($"Actualizando posición del agente existente: {agentName}");
+                            // Izquierda
+                            if (positionData[2] == 2)
+                            {
+                                agents[agentName].transform.Rotate(0, 90, 0);
+                                Debug.Log($"{agentName} roto a la: IZQUIERDA");
+                            }
+                            // Derecha
+                            else if (positionData[2] == 3)
+                            {
+                                agents[agentName].transform.Rotate(0, -90, 0);
+                                Debug.Log($"{agentName} roto a la: DERECHA");
+                            }
+                            // 180
+                            else if (positionData[2] == 4)
+                            {
+                                agents[agentName].transform.Rotate(0, 90, 0);
+                                agents[agentName].transform.Rotate(0, 90, 0);
+                                Debug.Log($"{agentName} roto a la: 180");
+                            }
                         }
                         else
                         {
