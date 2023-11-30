@@ -93,7 +93,7 @@ public class AgentController : MonoBehaviour
                         // Actualiza la posición del agente existente
                         agents[agentName].transform.position = new Vector3(positionData[0], 0.0f, positionData[1]);
 
-                        if (agentType == "Cosechadora")
+                        if (agentType == "Cosechadora" || agentType == "Tractor")
                         {
                             Debug.Log($"Actualizando posición del agente existente: {agentName}");
                             // Izquierda
