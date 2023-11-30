@@ -4,7 +4,6 @@ import websockets
 import agentpy as ap
 import numpy as np
 import json
-import random
 from copy import deepcopy
 
 # Inicia la herramienta de tracemalloc para el seguimiento de la asignación de memoria
@@ -25,6 +24,7 @@ class CeldaCampo(ap.Agent):
         self.isCosechado = False
         self.densidad = self.p.densidad
         self.identificador = "celda"
+        self.pertenencia = None
 
     def setup_pertenencia(self, id_cosechadora):
         self.pertenencia = id_cosechadora
@@ -46,6 +46,20 @@ class Cosechadora(ap.Agent):
         self.capacidad = 0
         self.estado = "cosechando"  # cosechando / lleno / esperando
         self.moving = False
+        # -1: None
+        # 0: Up
+        # 1: Down
+        # 2: Left
+        # 3: Right
+        # 4: Complete
+        self.current_direction = 0
+        # -1: None
+        # 0: Up
+        # 1: Down
+        # 2: Left
+        # 3: Right
+        # 4: Complete
+        self.previous_rotation = -1
 
     def move(self, direction):
         reward = 0
@@ -69,7 +83,7 @@ class Cosechadora(ap.Agent):
                     or self.target_position[1] > self.p.dimensiones_campo - 1
                     or self.target_position[1] < 0
                 ):
-                    print("\t\tOUT OF BOUNDS")
+                    # print("\t\tOUT OF BOUNDS")
                     reward = self.p.rewards_values["out_of_bounds"]
                     done = True
                     self.moving = False
@@ -78,23 +92,23 @@ class Cosechadora(ap.Agent):
                 for nb in self.neighbors(self, distance=self.p.harvest_radius):
                     if nb.identificador == "celda":
                         if nb.pertenencia != self.id:
-                            print("\t\tCELDA DE OTRA COSECHADORA")
+                            # print("\t\tCELDA DE OTRA COSECHADORA")
                             reward = self.p.rewards_values["celda_otra"]
                             done = False
                             break
                         elif nb.isCosechado:
-                            print("\t\tCELDA COSECHADA")
+                            # print("\t\tCELDA COSECHADA")
                             reward = self.p.rewards_values["celda_cosechada"]
                             done = False
                             break
                         # Si celda no ha sido cosechada
                         elif not nb.isCosechado:
-                            print("\t\tNORMAL")
+                            # print("\t\tNORMAL")
                             reward = self.p.rewards_values["normal"]
                             done = False
                             break
                         elif nb.identificador == "cosechadora":
-                            print("\t\COLISION")
+                            # print("\t\COLISION")
                             reward = self.p.rewards_values["colision"]
                             done = True
                             break
@@ -103,6 +117,49 @@ class Cosechadora(ap.Agent):
                 self.moving = False
         else:
             if self.estado == "cosechando":
+                rot = {
+                    "NONE": -1,
+                    "up": 0,
+                    "down": 1,
+                    "left": 2,
+                    "right": 3,
+                    "complete": 4,
+                }
+
+                self.previous_rotation = direction
+                if self.current_direction == rot["up"] and direction == "left":
+                    self.previous_rotation = rot["left"]
+                    self.current_direction = rot["left"]
+                elif self.current_direction == rot["up"] and direction == "right":
+                    self.previous_rotation = rot["right"]
+                    self.current_direction = rot["right"]
+                elif self.current_direction == rot["down"] and direction == "left":
+                    self.previous_rotation = rot["right"]
+                    self.current_direction = rot["left"]
+                elif self.current_direction == rot["down"] and direction == "right":
+                    self.previous_rotation = rot["left"]
+                    self.current_direction = rot["right"]
+                elif self.current_direction == rot["left"] and direction == "up":
+                    self.previous_rotation = rot["right"]
+                    self.current_direction = rot["up"]
+                elif self.current_direction == rot["left"] and direction == "down":
+                    self.previous_rotation = rot["left"]
+                    self.current_direction = rot["down"]
+                elif self.current_direction == rot["right"] and direction == "up":
+                    self.previous_rotation = rot["left"]
+                    self.current_direction = rot["up"]
+                elif self.current_direction == rot["right"] and direction == "down":
+                    self.previous_rotation = rot["right"]
+                    self.current_direction = rot["down"]
+                elif self.current_direction == rot["up"] and direction == "down":
+                    self.previous_rotation = rot["complete"]
+                    self.current_direction = rot["down"]
+                elif self.current_direction == rot["down"] and direction == "up":
+                    self.previous_rotation = rot["complete"]
+                    self.current_direction = rot["up"]
+                else:
+                    self.previous_rotation = rot["NONE"]
+
                 x, y = self.pos[0], self.pos[1]
                 if direction == "up":
                     # print("Up")
@@ -136,7 +193,7 @@ class Cosechadora(ap.Agent):
                     or self.target_position[1] > self.p.dimensiones_campo - 1
                     or self.target_position[1] < 0
                 ):
-                    print("\t\tOUT OF BOUNDS REWARD")
+                    # print("\t\tOUT OF BOUNDS REWARD")
                     reward = self.p.rewards_values["out_of_bounds"]
                     done = True
                     self.moving = False
@@ -161,59 +218,153 @@ class Cosechadora(ap.Agent):
                 ):
                     self.velocity = 0.0
                     self.estado = "lleno"
+                    self.previous_rotation = -1
 
 
 # Clase que representa un tractor en el campo
 class Tractor(ap.Agent):
     def setup(self):
-        self.velocity = 1.0
+        self.velocity = 1.5
         self.identificador = "tractor"
-        self.target_position = np.ndarray((2,), buffer=np.array([0, 0]), dtype=int)
+        self.target_position_x = 0
+        self.target_position_y = 0
         self.moving = False
+        # -1: None
+        # 2: Left
+        # 3: Right
+        # 4: Complete
+        self.previous_rotation = -1
+        self.estado = "ida"  # ida / vuelta
+        self.paso = 0
+
+        # 0  1  2  3
+        # 3 -1  2 -1
 
     def move(self):
         if self.moving:
-            print(
-                "YA ME ESTOY MOVIENDOOO. POS:",
-                self.pos,
-                "TARGET:",
-                self.target_position,
-            )
-            # Calcular el vector de dirección hacia la posición objetivo
-            direccion = self.target_position - self.pos
-            distancia = np.linalg.norm(direccion)
-            direccion = normalize(direccion)
+            if self.estado == "ida":
+                # Calcular el vector de dirección hacia la posición objetivo
+                if abs(self.pos[0] - self.target_position_x) >= 2.0:
+                    self.previous_rotation = -1
 
-            # Moverse hacia la posición objetivo
-            if distancia >= self.velocity:
-                print(
-                    "MOVE BY",
-                    "DIRECCION:",
-                    direccion,
-                    "VELOCIDAD:",
-                    self.velocity,
-                    "RESULTADO:",
-                    direccion * self.velocity,
-                )
-                self.space.move_by(self, direccion * self.velocity)
-            else:
-                # Si está cerca del objetivo, ajustar a la posición objetivo y dejar de moverse
-                self.moving = False
-                for nb in self.neighbors(self, distance=self.p.tractor_radius):
-                    if nb.identificador == "cosechadora" and nb.estado == "esperando":
-                        nb.capacidad = 0
-                        nb.estado = "cosechando"
-                        nb.velocity = 1.0
-                        self.target_position = self.pos_inicial
-                        self.moving = True
+                    direccion = (
+                        np.ndarray(
+                            (2,),
+                            buffer=np.array([self.target_position_x, 0]),
+                            dtype=int,
+                        )
+                        - self.pos
+                    )
+                    distancia = np.linalg.norm(direccion)
+                    direccion = normalize(direccion)
+
+                    # Moverse hacia la posición objetivo
+                    if distancia >= self.velocity:
+                        self.space.move_by(self, direccion * self.velocity)
+                else:
+                    if self.paso == 0:
+                        self.previous_rotation = 2
+                        self.paso = 1
+                    else:
+                        self.previous_rotation = -1
+                    # print("MOVIENDOSE EN Y")
+                    direccion = (
+                        np.ndarray(
+                            (2,),
+                            buffer=np.array(
+                                [self.target_position_x, self.target_position_y]
+                            ),
+                            dtype=int,
+                        )
+                        - self.pos
+                    )
+                    distancia = np.linalg.norm(direccion)
+                    direccion = normalize(direccion)
+
+                    # Moverse hacia la posición objetivo
+                    if distancia >= self.velocity:
+                        self.space.move_by(self, direccion * self.velocity)
+                    else:
+                        # Si está cerca del objetivo, ajustar a la posición objetivo y dejar de moverse
+                        self.moving = False
+                        for nb in self.neighbors(self, distance=self.p.tractor_radius):
+                            if (
+                                nb.identificador == "cosechadora"
+                                and nb.estado == "esperando"
+                            ):
+                                nb.capacidad = 0
+                                nb.estado = "cosechando"
+                                nb.velocity = 1.0
+                                (
+                                    self.target_position_x,
+                                    self.target_position_y,
+                                ) = self.pos_inicial
+                                self.moving = True
+                                self.paso = 0
+                                self.estado = "vuelta"
+            elif self.estado == "vuelta":
+                # Calcular el vector de dirección hacia la posición objetivo
+                if abs(self.pos[1] - self.target_position_y) >= 2.0:
+                    if self.paso == 0:
+                        self.previous_rotation = 4
+                        self.paso = 1
+                    else:
+                        self.previous_rotation = -1
+
+                    direccion = (
+                        np.ndarray(
+                            (2,),
+                            buffer=np.array([self.pos[0], self.target_position_y]),
+                            dtype=int,
+                        )
+                        - self.pos
+                    )
+                    distancia = np.linalg.norm(direccion)
+                    direccion = normalize(direccion)
+
+                    # Moverse hacia la posición objetivo
+                    if distancia >= self.velocity:
+                        self.space.move_by(self, direccion * self.velocity)
+                else:
+                    if self.paso == 1:
+                        self.previous_rotation = 3
+                        self.paso = 2
+                    else:
+                        self.previous_rotation = -1
+                    direccion = (
+                        np.ndarray(
+                            (2,),
+                            buffer=np.array(
+                                [self.target_position_x, self.target_position_y]
+                            ),
+                            dtype=int,
+                        )
+                        - self.pos
+                    )
+                    distancia = np.linalg.norm(direccion)
+                    direccion = normalize(direccion)
+
+                    # Moverse hacia la posición objetivo
+                    if distancia >= self.velocity:
+                        self.space.move_by(self, direccion * self.velocity)
+                    else:
+                        # Si está cerca del objetivo, ajustar a la posición objetivo y dejar de moverse
+                        self.moving = False
+                        self.estado = "ida"
+                        self.previous_rotation = 3
+                        self.paso = 0
 
         else:
+            self.previous_rotation = -1
             for nb in self.neighbors(self, distance=self.p.dimensiones_campo**2):
                 if nb.identificador == "cosechadora" and nb.estado == "lleno":
-                    self.target_position = nb.pos
+                    # print("ENCONTRADA COSECHADORA: ", nb.id)
+                    self.target_position_x, self.target_position_y = nb.pos
                     self.moving = True
                     nb.estado = "esperando"
+                    self.previous_rotation = 3
                     break
+            # print(f"{self.moving} {self.target_position_x} {self.target_position_y}")
 
     def setup_pos(self, space):
         self.space = space
@@ -230,9 +381,18 @@ class FieldModel(ap.Model):
             self, self.p.cosechadora_population, Cosechadora
         )
         self.tractors = ap.AgentList(self, self.p.tractor_population, Tractor)
+
+        # Dividir el campo en la cnaitdad de cosechadoras
+        size_segment = self.p.dimensiones_campo // self.p.cosechadora_population
+        positions = []
+        for i in range(self.p.cosechadora_population):
+            positions.append(
+                np.ndarray((2,), buffer=np.array([i * size_segment, 0]), dtype=int)
+            )
+
         self.space.add_agents(
             self.cosechadoras,
-            positions=[np.ndarray((2,), buffer=np.array([0, 0]), dtype=int)],
+            positions=positions,
         )
         self.cosechadoras.setup_pos(self.space)
 
@@ -240,8 +400,6 @@ class FieldModel(ap.Model):
         self.celdas_campo = ap.AgentList(
             self, self.p.dimensiones_campo**2, CeldaCampo
         )
-
-        self.celdas_campo.setup_pertenencia(self.cosechadoras[0].id)
 
         for i in range(self.p.tractor_population):
             self.space.positions[self.tractors[i]] = np.ndarray(
@@ -251,34 +409,51 @@ class FieldModel(ap.Model):
 
         # Asignar manualmente posiciones a cada celda_campo
         grid_size = self.p.dimensiones_campo
-        for x in range(grid_size):
-            for y in range(grid_size):
-                index = x * grid_size + y
+        contador = size_segment
+        cosechadora_index = 0
+        board = np.zeros((grid_size, grid_size))
+        for y in range(grid_size):
+            cosechadora_index = 0
+            contador = size_segment
+            for x in range(grid_size):
+                if (
+                    contador == 0
+                    and cosechadora_index < self.p.cosechadora_population - 1
+                ):
+                    contador = size_segment
+                    cosechadora_index += 1
+                index = y * grid_size + x
                 celda = self.celdas_campo[index]
-                # celda.setup_pos(self.space)
                 self.space.positions[celda] = (x, y)
+                celda.setup_pertenencia(self.cosechadoras[cosechadora_index].id)
 
+                contador -= 1
         self.cosechadoras.cosechar()
 
     # Envia las posiciones de los agentes a través de WebSocket
     async def send_positions(self, websocket):
         positions_cosechadoras = {
-            f"Cosechadora_{str(agent)}": agent.pos.tolist()
-            for agent in self.cosechadoras
-        }
-        capacidad_cosechadoras = {
-            f"Capacidad_{str(agent)}": [float(agent.capacidad)]
+            f"Cosechadora_{str(agent)}": [
+                float(agent.pos[0]),
+                float(agent.pos[1]),
+                float(agent.previous_rotation),
+                float(agent.capacidad),
+            ]
             for agent in self.cosechadoras
         }
         positions_tractors = {
-            f"Tractor_{str(agent)}": agent.pos.tolist() for agent in self.tractors
+            f"Tractor_{str(agent)}": [
+                float(agent.pos[0]),
+                float(agent.pos[1]),
+                float(agent.previous_rotation),
+            ]
+            for agent in self.tractors
         }
-        positions = {
+        data = {
             **positions_cosechadoras,
-            **capacidad_cosechadoras,
             **positions_tractors,
         }
-        await websocket.send(json.dumps(positions))
+        await websocket.send(json.dumps(data))
 
     def egreedy_policy(self, q_values, state, epsilon=0.1):
         # Se verifica si el valor epsilon es mayor a un número aleatorio entre 0 y 1
@@ -315,7 +490,7 @@ class FieldModel(ap.Model):
         for tractor in self.tractors:
             moving = True
             while moving:
-                print(f"Pos de tractor {tractor.id}: {tractor.pos}")
+                # print(f"Pos de tractor {tractor.id}: {tractor.pos}")
                 direccion = tractor.pos_inicial - tractor.pos
                 distancia = np.linalg.norm(direccion)
                 direccion = normalize(direccion)
@@ -363,7 +538,6 @@ class FieldModel(ap.Model):
 
                     reward = 0
                     while reward == 0 and cosechadora.velocity != 0.0:
-                        print("CICLOOOO")
                         reward, done = cosechadora.move(direcciones[action])
 
                     if cosechadora.estado == "lleno":
@@ -427,7 +601,8 @@ class FieldModel(ap.Model):
                     action = self.egreedy_policy(q_values, state, 0.0)
 
                     reward = 0
-                    while reward == 0:
+                    while reward == 0 and cosechadora.velocity != 0.0:
+                        # print("CICLOO")
                         reward, done = self.cosechadoras.move(direcciones[action])[0]
                     print(direcciones[action])
 
@@ -474,14 +649,14 @@ parameters2D = {
     "steps": 1000,
     "ndim": 2,
     "densidad": 10,
-    "capacidad_max": 100,
+    "capacidad_max": 1500,
     "cosechadora_population": 1,
     "tractor_population": 1,
     "inner_radius": 1,  # 3
     "outer_radius": 3,  # 10
     "harvest_radius": 0.2,  # 1
     "border_distance": 1,  # 10
-    "tractor_radius": 1,
+    "tractor_radius": 2,
     "cohesion_strength": 0.005,
     "separation_strength": 0.1,
     "alignment_strength": 0.3,
@@ -490,7 +665,7 @@ parameters2D = {
     "exploration_rate_upper": 0.1,
     "exploration_rate_lower": 0.1,
     "exploration_rate_decrease": 0.05,
-    "num_episodes": 200,
+    "num_episodes": 500,
     "learning_rate": 0.1,  # 0.5
     "gamma": 0.9,
     "rewards_values": {
@@ -505,11 +680,10 @@ parameters2D = {
     },
 }
 
-# Crea una instancia del modelo y ejecuta la simulación con WebSocket
 model = FieldModel(parameters2D)
 model.setup()
 q_learning_rewards, q_values = model.q_learning()
 
-model_2 = FieldModel(parameters2D)
-model_2.setup()
-asyncio.run(model_2.run_simulation_with_websocket(q_values))
+# model_2 = FieldModel(parameters2D)
+# model_2.setup()
+asyncio.run(model.run_simulation_with_websocket(q_values))

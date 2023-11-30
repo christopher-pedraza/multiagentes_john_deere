@@ -5,7 +5,7 @@ using WebSocketSharp;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 
-public class BoidsController : MonoBehaviour
+public class AgentController : MonoBehaviour
 {
     // Prefabs para agentes en Unity
     public GameObject cosechadoraPrefab;
@@ -81,51 +81,67 @@ public class BoidsController : MonoBehaviour
                 {
                     agentType = "Tractor";
                 }
-                else
-                {
-                    agentType = "Campo";
-                }
 
-                if (!agentType.Equals("Campo"))
-                {
-                    // Registra información para depuración
-                    Debug.Log($"Agente: {agentName}, Tipo: {agentType}, Posición: {positionData[0]}, {positionData[1]}");
+                // Registra información para depuración
+                Debug.Log($"Agente: {agentName}, Tipo: {agentType}, Posición: {positionData[0]}, {positionData[1]}");
 
-                    MainThreadDispatcher.Instance.DispatchToMainThread(() =>
+                MainThreadDispatcher.Instance.DispatchToMainThread(() =>
+                {
+                    // Verifica si el agente ya está en el diccionario
+                    if (agents.ContainsKey(agentName))
                     {
-                        // Verifica si el agente ya está en el diccionario
-                        if (agents.ContainsKey(agentName))
-                        {
-                            // Actualiza la posición del agente existente
-                            agents[agentName].transform.position = new Vector3(positionData[0], 0.0f, positionData[1]);
-                            Debug.Log($"Actualizando posición del agente existente: {agentName}");
-                        }
-                        else
-                        {
-                            if (cosechadoraPrefab != null && tractorPrefab != null)
-                            {
-                                // Instancia un nuevo agente según el tipo
-                                GameObject newAgent;
-                                if (agentType == "Cosechadora")
-                                {
-                                    newAgent = Instantiate(cosechadoraPrefab, new Vector3(positionData[0], 0.0f, positionData[1]), Quaternion.identity);
-                                }
-                                else if (agentType == "Tractor")
-                                {
-                                    newAgent = Instantiate(tractorPrefab, new Vector3(positionData[0], 0.0f, positionData[1]), Quaternion.identity);
-                                }
-                                else
-                                {
-                                    Debug.LogError($"Tipo de agente desconocido: {agentType}");
-                                    return;
-                                }
+                        // Actualiza la posición del agente existente
+                        agents[agentName].transform.position = new Vector3(positionData[0], 0.0f, positionData[1]);
 
-                                agents.Add(agentName, newAgent);
-                                Debug.Log($"Instanciando nuevo agente: {agentName}");
+                        // if (agentType == "Cosechadora" || agentType == "Tractor")
+                        // {
+                        //     Debug.Log($"Actualizando posición del agente existente: {agentName}");
+                        //     // Izquierda
+                        //     if (positionData[2] == 2)
+                        //     {
+                        //         agents[agentName].transform.Rotate(0, 90, 0);
+                        //         Debug.Log($"{agentName} roto a la: IZQUIERDA");
+                        //     }
+                        //     // Derecha
+                        //     else if (positionData[2] == 3)
+                        //     {
+                        //         agents[agentName].transform.Rotate(0, -90, 0);
+                        //         Debug.Log($"{agentName} roto a la: DERECHA");
+                        //     }
+                        //     // 180
+                        //     else if (positionData[2] == 4)
+                        //     {
+                        //         agents[agentName].transform.Rotate(0, 90, 0);
+                        //         agents[agentName].transform.Rotate(0, 90, 0);
+                        //         Debug.Log($"{agentName} roto a la: 180");
+                        //     }
+                        // }
+                    }
+                    else
+                    {
+                        if (cosechadoraPrefab != null && tractorPrefab != null)
+                        {
+                            // Instancia un nuevo agente según el tipo
+                            GameObject newAgent;
+                            if (agentType == "Cosechadora")
+                            {
+                                newAgent = Instantiate(cosechadoraPrefab, new Vector3(positionData[0], 0.0f, positionData[1]), Quaternion.identity);
                             }
+                            else if (agentType == "Tractor")
+                            {
+                                newAgent = Instantiate(tractorPrefab, new Vector3(positionData[0], 0.0f, positionData[1]), Quaternion.identity);
+                            }
+                            else
+                            {
+                                Debug.LogError($"Tipo de agente desconocido: {agentType}");
+                                return;
+                            }
+
+                            agents.Add(agentName, newAgent);
+                            Debug.Log($"Instanciando nuevo agente: {agentName}");
                         }
-                    });
-                }
+                    }
+                });
             }
         }
         catch (Exception ex)
