@@ -83,7 +83,7 @@ class Cosechadora(ap.Agent):
                     or self.target_position[1] > self.p.dimensiones_campo - 1
                     or self.target_position[1] < 0
                 ):
-                    print("\t\tOUT OF BOUNDS")
+                    # print("\t\tOUT OF BOUNDS")
                     reward = self.p.rewards_values["out_of_bounds"]
                     done = True
                     self.moving = False
@@ -92,23 +92,23 @@ class Cosechadora(ap.Agent):
                 for nb in self.neighbors(self, distance=self.p.harvest_radius):
                     if nb.identificador == "celda":
                         if nb.pertenencia != self.id:
-                            print("\t\tCELDA DE OTRA COSECHADORA")
+                            # print("\t\tCELDA DE OTRA COSECHADORA")
                             reward = self.p.rewards_values["celda_otra"]
                             done = False
                             break
                         elif nb.isCosechado:
-                            print("\t\tCELDA COSECHADA")
+                            # print("\t\tCELDA COSECHADA")
                             reward = self.p.rewards_values["celda_cosechada"]
                             done = False
                             break
                         # Si celda no ha sido cosechada
                         elif not nb.isCosechado:
-                            print("\t\tNORMAL")
+                            # print("\t\tNORMAL")
                             reward = self.p.rewards_values["normal"]
                             done = False
                             break
                         elif nb.identificador == "cosechadora":
-                            print("\t\COLISION")
+                            # print("\t\COLISION")
                             reward = self.p.rewards_values["colision"]
                             done = True
                             break
@@ -193,7 +193,7 @@ class Cosechadora(ap.Agent):
                     or self.target_position[1] > self.p.dimensiones_campo - 1
                     or self.target_position[1] < 0
                 ):
-                    print("\t\tOUT OF BOUNDS REWARD")
+                    # print("\t\tOUT OF BOUNDS REWARD")
                     reward = self.p.rewards_values["out_of_bounds"]
                     done = True
                     self.moving = False
@@ -240,14 +240,21 @@ class Tractor(ap.Agent):
                 self.target_position_y,
             )
             # Calcular el vector de dirección hacia la posición objetivo
-            if abs(self.pos[0] - self.target_position_x) >= 1:
+            if abs(self.pos[0] - self.target_position_x) >= 1.5:
                 direccion = (
                     np.ndarray(
                         (2,), buffer=np.array([self.target_position_x, 0]), dtype=int
                     )
                     - self.pos
                 )
+                distancia = np.linalg.norm(direccion)
+                direccion = normalize(direccion)
+
+                # Moverse hacia la posición objetivo
+                if distancia >= self.velocity:
+                    self.space.move_by(self, direccion * self.velocity)
             else:
+                print("ELSE")
                 direccion = (
                     np.ndarray(
                         (2,),
@@ -258,25 +265,28 @@ class Tractor(ap.Agent):
                     )
                     - self.pos
                 )
-            distancia = np.linalg.norm(direccion)
-            direccion = normalize(direccion)
+                distancia = np.linalg.norm(direccion)
+                direccion = normalize(direccion)
 
-            # Moverse hacia la posición objetivo
-            if distancia >= self.velocity:
-                self.space.move_by(self, direccion * self.velocity)
-            else:
-                # Si está cerca del objetivo, ajustar a la posición objetivo y dejar de moverse
-                self.moving = False
-                for nb in self.neighbors(self, distance=self.p.tractor_radius):
-                    if nb.identificador == "cosechadora" and nb.estado == "esperando":
-                        nb.capacidad = 0
-                        nb.estado = "cosechando"
-                        nb.velocity = 1.0
-                        (
-                            self.target_position_x,
-                            self.target_position_y,
-                        ) = self.pos_inicial
-                        self.moving = True
+                # Moverse hacia la posición objetivo
+                if distancia >= self.velocity:
+                    self.space.move_by(self, direccion * self.velocity)
+                else:
+                    # Si está cerca del objetivo, ajustar a la posición objetivo y dejar de moverse
+                    self.moving = False
+                    for nb in self.neighbors(self, distance=self.p.tractor_radius):
+                        if (
+                            nb.identificador == "cosechadora"
+                            and nb.estado == "esperando"
+                        ):
+                            nb.capacidad = 0
+                            nb.estado = "cosechando"
+                            nb.velocity = 1.0
+                            (
+                                self.target_position_x,
+                                self.target_position_y,
+                            ) = self.pos_inicial
+                            self.moving = True
 
         else:
             for nb in self.neighbors(self, distance=self.p.dimensiones_campo**2):
@@ -342,7 +352,7 @@ class FieldModel(ap.Model):
 
                 # Asignar pertenencia a cada celda de campo con respecto al segmento en el que este
                 celda.setup_pertenencia(self.cosechadoras[cosechadora_index].id)
-                print(f"({x},{y}) -> {cosechadora_index}")
+                # print(f"({x},{y}) -> {cosechadora_index}")
 
             contador -= 1
         self.cosechadoras.cosechar()
@@ -407,7 +417,7 @@ class FieldModel(ap.Model):
         for tractor in self.tractors:
             moving = True
             while moving:
-                print(f"Pos de tractor {tractor.id}: {tractor.pos}")
+                # print(f"Pos de tractor {tractor.id}: {tractor.pos}")
                 direccion = tractor.pos_inicial - tractor.pos
                 distancia = np.linalg.norm(direccion)
                 direccion = normalize(direccion)
@@ -455,7 +465,7 @@ class FieldModel(ap.Model):
 
                     reward = 0
                     while reward == 0 and cosechadora.velocity != 0.0:
-                        print("CICLOOOO")
+                        # print("CICLOOOO")
                         reward, done = cosechadora.move(direcciones[action])
 
                     if cosechadora.estado == "lleno":
@@ -557,132 +567,23 @@ class FieldModel(ap.Model):
             server.close()
             await server.wait_closed()
 
-    async def ws_handler_inner_qlearning(self, websocket):
-        try:
-            print("\n**************\nQLEARNING\n**************\n")
-            num_states = self.p.dimensiones_campo**2
-            num_actions = 4
-            q_values = np.zeros((num_states, num_actions))
-            ep_rewards = []
-            direcciones = ["up", "down", "left", "right"]
-            done = False
-            reward_sum = 0
-
-            for i in range(self.p.num_episodes):
-                self.reset()
-                done = False
-                reward_sum = 0
-                print(f"Episodio {i}")
-                while not done:
-                    for cosechadora in self.cosechadoras:
-                        if cosechadora.estado == "lleno":
-                            continue
-
-                        state = (
-                            cosechadora.pos[1] * self.p.dimensiones_campo
-                            + cosechadora.pos[0]
-                        )
-
-                        action = self.egreedy_policy(
-                            q_values, state, self.p.exploration_rate_upper
-                        )
-
-                        reward = 0
-                        while reward == 0 and cosechadora.velocity != 0.0:
-                            print("CICLOOOO")
-                            reward, done = cosechadora.move(direcciones[action])
-
-                        if cosechadora.estado == "lleno":
-                            continue
-
-                        next_state = (
-                            cosechadora.pos[1] * self.p.dimensiones_campo
-                            + cosechadora.pos[0]
-                        )
-
-                        if cosechadora.pos[0] % 2 == 0 and action == 0:
-                            reward += self.p.rewards_values["up"]
-                        elif cosechadora.pos[0] % 2 == 1 and action == 1:
-                            reward += self.p.rewards_values["down"]
-
-                        if (
-                            cosechadora.pos[1] == self.p.dimensiones_campo - 1
-                            or cosechadora.pos[1] == 0
-                        ) and action == 3:
-                            reward += self.p.rewards_values["sides"]
-
-                        reward_sum += reward
-
-                        # La ecuación de Bellman se define como:
-                        # Q(s,a) = r + gamma * max(Q(s',a')) - Q(s,a)
-                        if done:
-                            td_target = reward
-                        else:
-                            td_target = reward + self.p.gamma * np.max(
-                                q_values[next_state]
-                            )
-                        td_error = td_target - q_values[state][action]
-                        # Actualiza el valor Q para el estado y acción actuales con el valor
-                        # de la ecuación de Bellman.
-                        q_values[state][action] += self.p.learning_rate * td_error
-
-                    self.cosechadoras.cosechar()
-                    self.tractors.move()
-
-                    await self.send_positions(websocket)
-                    await asyncio.sleep(0.25)
-
-                if self.p.exploration_rate_upper > self.p.exploration_rate_lower:
-                    self.p.exploration_rate_upper -= self.p.exploration_rate_decrease
-
-                ep_rewards.append(reward_sum)
-
-            print(f"EPISODE REWARDS: {ep_rewards}, \nQ_VALUES: \n{q_values}")
-        except websockets.exceptions.ConnectionClosed:
-            pass
-
-    async def ws_handler_qlearning(self, websocket, path):
-        await self.ws_handler_inner_qlearning(websocket)
-
-    async def run_qlearning_with_websocket(self):
-        loop = asyncio.get_running_loop()
-
-        # Habilitar tracemalloc dentro del bucle de eventos
-        tracemalloc.start()
-
-        # Inicia el servidor WebSocket
-        server = await websockets.serve(
-            lambda ws, path: self.ws_handler_qlearning(ws, path),
-            "localhost",
-            8765,
-        )
-
-        try:
-            for _ in range(self.p.steps):
-                self.step()
-                await asyncio.sleep(0.1)
-        finally:
-            # Cierre del servidor WebSocket
-            server.close()
-            await server.wait_closed()
-
 
 # Parámetros del modelo en 2D
 parameters2D = {
-    "size": 50,
-    "dimensiones_campo": 50,
+    "size": 20,
+    "dimensiones_campo": 20,
     "seed": 123,
     "steps": 1000,
     "ndim": 2,
     "densidad": 10,
-    "capacidad_max": 20,
+    "capacidad_max": 200,
     "cosechadora_population": 3,
     "tractor_population": 5,
     "inner_radius": 1,  # 3
     "outer_radius": 3,  # 10
     "harvest_radius": 0.2,  # 1
     "border_distance": 1,  # 10
-    "tractor_radius": 2.5,
+    "tractor_radius": 2,
     "cohesion_strength": 0.005,
     "separation_strength": 0.1,
     "alignment_strength": 0.3,
@@ -691,7 +592,7 @@ parameters2D = {
     "exploration_rate_upper": 0.1,
     "exploration_rate_lower": 0.1,
     "exploration_rate_decrease": 0.05,
-    "num_episodes": 200,
+    "num_episodes": 5,
     "learning_rate": 0.1,  # 0.5
     "gamma": 0.9,
     "rewards_values": {
@@ -706,7 +607,10 @@ parameters2D = {
     },
 }
 
-# Crea una instancia del modelo y ejecuta la simulación con WebSocket
 model = FieldModel(parameters2D)
 model.setup()
-asyncio.run(model.run_qlearning_with_websocket())
+q_learning_rewards, q_values = model.q_learning()
+
+model_2 = FieldModel(parameters2D)
+model_2.setup()
+asyncio.run(model_2.run_simulation_with_websocket(q_values))
