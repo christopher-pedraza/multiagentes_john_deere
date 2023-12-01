@@ -7,7 +7,6 @@ Movilidad urbana es fundamental para la vida diaria de millones de personas. Sin
 - Instituto Tecnológico y de Estudios Superiores de Monterrey, Campus Monterrey
 - Modelación de Sistemas Multiagentes con Gráficas Computacionales, Grupo 302
 
-
 ## Profesores asesores
 - Raul V. Ramirez Velarde
 - Luis Alberto Muñoz Ubando
@@ -19,13 +18,8 @@ Movilidad urbana es fundamental para la vida diaria de millones de personas. Sin
 - David Cavazos Wolberg
 - Fausto Pacheco Martínez
 
-
-
-### Miró
-[Miró Board](https://miro.com/app/board/uXjVNR0RZDw=/?share_link_id=372821292186)
-
-## Presentación 1
-[Link al Script de Presentación en Canva](https://www.canva.com/design/DAF0D-UutKo/DtBF1n_CguwKEUeysDT6Mw/view?utm_content=DAF0D-UutKo&utm_campaign=designshare&utm_medium=link&utm_source=editor)
+## Presentación
+[Link a la presentación en Canva](https://www.canva.com/design/DAF0D-UutKo/DtBF1n_CguwKEUeysDT6Mw/view?utm_content=DAF0D-UutKo&utm_campaign=designshare&utm_medium=link&utm_source=editor)
 
 ## Simulación
 [Link al Video de Simulación](#)
