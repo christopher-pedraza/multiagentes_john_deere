@@ -19,8 +19,34 @@ Movilidad urbana es fundamental para la vida diaria de millones de personas. Sin
 - Fausto Pacheco Martínez
 
 ## Presentación
-[Link a la presentación en Canva](https://www.canva.com/design/DAF0D-UutKo/DtBF1n_CguwKEUeysDT6Mw/view?utm_content=DAF0D-UutKo&utm_campaign=designshare&utm_medium=link&utm_source=editor)
+- [Link a la presentación en Canva](https://www.canva.com/design/DAF0D-UutKo/DtBF1n_CguwKEUeysDT6Mw/view?utm_content=DAF0D-UutKo&utm_campaign=designshare&utm_medium=link&utm_source=editor)
 
-## Simulación
-[Link al Video de Simulación](#)
+## Demos
+- [Conexión Unity-Python con websocket e interacción multiagente](https://youtu.be/0q4Wyd9vReg)
+- [Implementación de Q-Learning para el entrenamiento](https://youtu.be/KeXsPdduUNk)
+- [Simulación final](https://youtu.be/zFzxAbX7jCE)
 
+## Librerías necesarias para correr el programa de Python
+- pymemtrace
+```
+pip install pymemtrace
+```
+- asyncio
+```
+pip install asyncio
+```
+- websockets
+```
+pip install websockets
+```
+- agentpy
+```
+pip install agentpy
+```
+- numpy
+```
+pip install numpy
+```
+
+## Librería usada en simulación de Unity
+- [websocket-sharp](https://github.com/sta/websocket-sharp)
