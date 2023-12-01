@@ -1,27 +1,23 @@
 # Multiagentes_john_deere
 
-![Tec de Monterrey](Resources/TecLogo.png)
+## Descripción del problema
+Movilidad urbana es fundamental para la vida diaria de millones de personas. Sin embargo, cuando pensamos en movilidad, a menudo pasamos por alto la importancia de la logística en la agricultura. Cada día, nuestros alimentos hacen un viaje desde el campo hasta nuestra mesa, y el proceso detrás de esto es esencial. Optimizar las operaciones agrícolas a través de un sistema inteligente no sólo mejora la eficiencia en la producción de alimentos, sino que también puede reducir costos, lo que podría traducirse en precios más bajos para los consumidores. Además, al tener una logística más eficiente, disminuimos la congestión en las carreteras, lo que beneficia a todos los que viven y trabajan en áreas urbanas.
+
+## Institución y materia
+- Instituto Tecnológico y de Estudios Superiores de Monterrey, Campus Monterrey
+- Modelación de Sistemas Multiagentes con Gráficas Computacionales, Grupo 302
 
 
-**Instituto Tecnológico y de Estudios Superiores de Monterrey**
-
-**Campus Monterrey**
-
-**TC2008B - Grupo 302**
-
-**Modelación de Sistemas Multiagentes con Gráficas Computacionales**
-
-
-**Profesores:**
+## Profesores asesores
 - Raul V. Ramirez Velarde
 - Luis Alberto Muñoz Ubando
 
-**Equipo 3:**
-- Ainhize Legarreta García (A01762291)
-- Enrique Uzquiano Puras (A01762083)
-- Christopher Pedraza Pohlenz (A01177767)
-- David Cavazos Wolberg (A01721909)
-- Fausto Pacheco Martínez (A01412004)
+## Equipo
+- Ainhize Legarreta García
+- Enrique Uzquiano Puras
+- Christopher Pedraza Pohlenz
+- David Cavazos Wolberg
+- Fausto Pacheco Martínez
 
 
 
